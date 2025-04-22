@@ -38,9 +38,7 @@ function calculateRisk(data) {
     }
   }
 
-  // Alcohol
-  if (data.alcohol.includes('Moderately')) riskScore += 1;
-  else if (data.alcohol.includes('Regularly')) riskScore += 2;
+  // Removed alcohol scoring
 
   // Chronic Conditions
   const conditions = Array.isArray(data.conditions) ? data.conditions : [data.conditions];
@@ -109,7 +107,14 @@ function calculateRisk(data) {
     recommendations.push("Your health profile looks good! Keep up the great habits.");
   }
 
-  return { riskScore, riskCategory, recommendations };
+  return { 
+    riskScore, 
+    riskCategory, 
+    recommendations,
+    physicalScore: Math.max(0, 100 - riskScore * 2.5), // Example calculation
+    mentalScore: Math.max(0, 100 - (parseInt(data.stress) || 5) * 5, // Example calculation
+    lifestyleScore: data.exercise && data.exercise.includes('Never') ? 50 : 80 // Example calculation
+  };
 }
 
 // API endpoint
@@ -120,7 +125,10 @@ app.post('/assess', (req, res) => {
       status: 'success',
       riskCategory: riskData.riskCategory,
       riskScore: riskData.riskScore,
-      recommendations: riskData.recommendations
+      recommendations: riskData.recommendations,
+      physicalScore: riskData.physicalScore,
+      mentalScore: riskData.mentalScore,
+      lifestyleScore: riskData.lifestyleScore
     });
   } catch (error) {
     console.error('Assessment error:', error);
