@@ -1,11 +1,14 @@
-const express = require('express');
-const cors = require('cors');
+import express from 'express';
+import cors from 'cors';
+import morgan from 'morgan';
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Enable CORS for all routes
-app.use(cors());
+// Middleware
+app.use(cors({ origin: '*' }));
 app.use(express.json());
+app.use(morgan('dev'));  // HTTP request logging
 
 // Risk calculation function
 function calculateRisk(data) {
@@ -26,11 +29,9 @@ function calculateRisk(data) {
     
     // Chronic conditions
     const conditions = Array.isArray(data.conditions) ? data.conditions : [data.conditions];
-    if (conditions.includes('none')) {
-        riskScore += 0;
-    } else {
+    if (!conditions.includes('none')) {
         riskScore += conditions.length * 2;
-        recommendations.push("Regular health check-ups are recommended for managing your chronic conditions.");
+        recommendations.push("Regular health check-ups are recommended for managing chronic conditions.");
     }
     
     // Stress level
@@ -38,25 +39,6 @@ function calculateRisk(data) {
     riskScore += Math.floor(stress / 3);
     if (stress > 5) {
         recommendations.push("Practice stress management techniques like meditation or yoga.");
-    }
-    
-    // Mental health
-    const wellbeing = parseInt(data.mentalWellbeing) || 5;
-    if (wellbeing < 5) {
-        riskScore += 2;
-        recommendations.push("Consider speaking with a mental health professional for support.");
-    }
-    
-    // Screen time
-    if (data.screenTime.includes('More than 6 hours')) {
-        riskScore += 1;
-        recommendations.push("Reduce screen time and take regular breaks to protect your eye health.");
-    }
-    
-    // Physical activity
-    if (data.occupation === 'Sedentary') {
-        riskScore += 1;
-        recommendations.push("Incorporate regular physical activity into your routine.");
     }
     
     // Determine risk category
@@ -84,6 +66,7 @@ app.post('/assess', (req, res) => {
             recommendations: riskData.recommendations
         });
     } catch (error) {
+        console.error('Assessment error:', error);
         res.status(500).json({
             status: 'error',
             message: 'An error occurred during risk assessment'
@@ -93,5 +76,5 @@ app.post('/assess', (req, res) => {
 
 // Start server
 app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+    console.log(`Server running on http://localhost:${PORT}`);
 });
