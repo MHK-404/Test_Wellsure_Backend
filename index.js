@@ -6,7 +6,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Middleware
-app.use(cors({ origin: '*' }));
+app.use(cors({ origin: 'https://lively-dune-0e6a62f03.6.azurestaticapps.net' }));  // Allow only the frontend URL
 app.use(express.json());
 app.use(morgan('dev'));  // HTTP request logging
 
