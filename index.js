@@ -5,170 +5,101 @@ import morgan from 'morgan';
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(cors({
-  origin: 'https://mango-wave-02f3f921e.6.azurestaticapps.net',
-  methods: ['POST'],
-  credentials: false
-}));
-
+app.use(cors({ origin: '*', methods: ['POST'] }));
 app.use(express.json());
 app.use(morgan('dev'));
 
-// Risk calculation logic
+function analyzeSentiment(text) {
+  if (!text) return 5;
+  const negativeWords = ['sad', 'tired', 'anxious', 'stressed', 'angry', 'overwhelmed'];
+  const positiveWords = ['happy', 'calm', 'relaxed', 'peaceful', 'good', 'great'];
+  const score = text.split(/\s+/).reduce((acc, word) => {
+    const w = word.toLowerCase();
+    if (positiveWords.includes(w)) return acc + 1;
+    if (negativeWords.includes(w)) return acc - 1;
+    return acc;
+  }, 0);
+  return Math.max(1, Math.min(10, 5 + score));
+}
+
 function calculateRisk(data) {
-  let riskScore = 0;
-  let recommendations = [];
-  let physicalScore = 100;
-  let mentalScore = 100;
-  let lifestyleScore = 100;
+  let score = 0;
+  const recommendations = [];
+  let physical = 100, mental = 100;
 
-  // Age calculation
-  if (data.age < 25) riskScore += 1;
-  else if (data.age < 40) riskScore += 2;
-  else if (data.age < 60) riskScore += 3;
-  else riskScore += 4;
-  physicalScore -= riskScore * 2;
+  const age = parseInt(data.age);
+  if (age < 30) score += 5;
+  else if (age < 50) score += 10;
+  else score += 15;
 
-  // Smoking calculation
-  if (data.smoke.includes('Yes')) {
-    riskScore += 3;
-    physicalScore -= 15;
-    recommendations.push("Consider enrolling in a smoking cessation program or support group.");
+  if (data.smoke && data.smoke.includes('Yes')) {
+    score += 15;
+    physical -= 15;
+    recommendations.push('Quit smoking — it reduces your risk significantly. Join support groups or nicotine therapy.');
+  }
 
-    if (data.smokeAmount) {
-      if (data.smokeAmount.includes('More than 20')) {
-        riskScore += 2;
-        physicalScore -= 10;
-      }
-      else if (data.smokeAmount.includes('10-20')) {
-        riskScore += 1.5;
-        physicalScore -= 7;
-      }
-      else if (data.smokeAmount.includes('5-10')) {
-        riskScore += 1;
-        physicalScore -= 5;
-      }
+  const conds = Array.isArray(data.conditions) ? data.conditions : [data.conditions];
+  if (!conds.includes('none')) {
+    score += conds.length * 5;
+    physical -= conds.length * 5;
+    recommendations.push('Manage chronic conditions through diet, medication, and regular consultations.');
+  }
+
+  const h = parseFloat(data.height) / 100;
+  const w = parseFloat(data.weight);
+  if (h > 0 && w > 0) {
+    const bmi = w / (h * h);
+    if (bmi < 18.5 || bmi > 30) {
+      score += 10;
+      physical -= 10;
+      recommendations.push('Maintain a healthy BMI with balanced nutrition and physical activity.');
     }
   }
 
-  // Chronic Conditions
-  const conditions = Array.isArray(data.conditions) ? data.conditions : [data.conditions];
-  if (!conditions.includes('none')) {
-    riskScore += conditions.length * 2;
-    physicalScore -= conditions.length * 5;
-    recommendations.push("Maintain regular check-ups and follow treatment plans for any chronic condition(s).");
-  }
+  const stress = parseInt(data.stress);
+  const wellbeing = parseInt(data.mentalWellbeing);
+  score += stress * 1.5;
+  mental -= stress * 2;
 
-  // BMI calculation
-  const heightM = (parseFloat(data.height) || 0) / 100;
-  const weight = parseFloat(data.weight) || 0;
-  if (heightM > 0 && weight > 0) {
-    const bmi = weight / (heightM * heightM);
-    if (bmi < 18.5) {
-      riskScore += 1;
-      physicalScore -= 5;
-      recommendations.push("You may be underweight. Consider nutritional guidance.");
-    } else if (bmi >= 25 && bmi < 30) {
-      riskScore += 1;
-      physicalScore -= 5;
-      recommendations.push("You are overweight. A balanced diet and exercise plan could be beneficial.");
-    } else if (bmi >= 30) {
-      riskScore += 2;
-      physicalScore -= 10;
-      recommendations.push("Obesity increases risk for many conditions. Consider professional health advice.");
-    }
-  }
+  if (stress > 6) recommendations.push('High stress impacts both physical and mental health. Try mindfulness, breathing exercises, or journaling.');
+  if (wellbeing < 5) recommendations.push('Low well-being may signal emotional fatigue. Consider counseling or talking to someone you trust.');
 
-  // Stress & Mental Health
-  const stress = parseInt(data.stress) || 5;
-  riskScore += Math.floor(stress / 3);
-  mentalScore -= stress * 3;
-  if (stress > 5) recommendations.push("Practice stress management techniques regularly.");
+  const sentiment = analyzeSentiment(data.mentalText);
+  score += (10 - sentiment);
+  mental -= (10 - sentiment) * 2;
 
-  const mentalIssues = Array.isArray(data.mentalIssues) ? data.mentalIssues : [data.mentalIssues];
-  if (!mentalIssues.includes('none')) {
-    riskScore += mentalIssues.length;
-    mentalScore -= mentalIssues.length * 5;
-    recommendations.push("Consider speaking with a mental health professional about symptoms like anxiety, depression, or insomnia.");
-  }
+  // Additional general suggestions
+  if (physical < 70) recommendations.push('Increase physical activity and hydration to improve resilience and lower risk.');
+  if (mental < 70) recommendations.push('Strengthen social connections and prioritize self-care to boost mental health.');
 
-  // Lifestyle factors
-  if (data.screenTime && data.screenTime.includes('More than 6')) {
-    riskScore += 1;
-    lifestyleScore -= 5;
-  }
-  
-  if (data.vacations && data.vacations.includes('Never')) {
-    riskScore += 1;
-    lifestyleScore -= 5;
-    recommendations.push("Taking breaks and vacations can improve well-being. Consider planning occasional time off.");
-  }
+  score = Math.min(100, Math.max(0, score));
+  physical = Math.max(0, physical);
+  mental = Math.max(0, mental);
 
-  if (data.sleep && data.sleep.includes('Less than 5')) {
-    riskScore += 2;
-    lifestyleScore -= 10;
-    recommendations.push("Aim for at least 7 hours of quality sleep each night.");
-  }
+  let category = 'Low Risk';
+  if (score > 66) category = 'High Risk';
+  else if (score > 33) category = 'Moderate Risk';
 
-  if (data.diet && data.diet.includes('Poor')) {
-    riskScore += 2;
-    lifestyleScore -= 10;
-    recommendations.push("A healthier diet rich in whole foods can greatly improve overall health.");
-  }
-
-  if (data.exercise && data.exercise.includes('Never')) {
-    riskScore += 2;
-    lifestyleScore -= 15;
-    recommendations.push("Regular physical activity can help reduce risk. Try starting small with daily walks.");
-  }
-
-  // Calculate final scores (ensure they don't go below 0)
-  physicalScore = Math.max(0, physicalScore);
-  mentalScore = Math.max(0, mentalScore);
-  lifestyleScore = Math.max(0, lifestyleScore);
-
-  // Risk category
-  let riskCategory;
-  if (riskScore < 10) riskCategory = "Low Risk";
-  else if (riskScore < 20) riskCategory = "Moderate Risk";
-  else riskCategory = "High Risk";
-
-  if (recommendations.length === 0) {
-    recommendations.push("Your health profile looks good! Keep up the great habits.");
-  }
-
-  return { 
-    riskScore, 
-    riskCategory, 
+  return {
+    riskScore: Math.round(score),
+    riskCategory: category,
     recommendations,
-    physicalScore: Math.round(physicalScore),
-    mentalScore: Math.round(mentalScore),
-    lifestyleScore: Math.round(lifestyleScore)
+    physicalScore: Math.round(physical),
+    mentalScore: Math.round(mental),
+    lifestyleScore: 0
   };
 }
 
-// API endpoint
 app.post('/assess', (req, res) => {
   try {
-    const riskData = calculateRisk(req.body);
-    res.json({
-      status: 'success',
-      riskCategory: riskData.riskCategory,
-      riskScore: riskData.riskScore,
-      recommendations: riskData.recommendations,
-      physicalScore: riskData.physicalScore,
-      mentalScore: riskData.mentalScore,
-      lifestyleScore: riskData.lifestyleScore
-    });
-  } catch (error) {
-    console.error('Assessment error:', error);
-    res.status(500).json({
-      status: 'error',
-      message: 'An error occurred during risk assessment'
-    });
+    const results = calculateRisk(req.body);
+    res.json(results);
+  } catch (e) {
+    console.error('Assessment error:', e);
+    res.status(500).json({ status: 'error', message: 'Something went wrong.' });
   }
 });
 
 app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+  console.log(`API running on http://localhost:${PORT}`);
 });
