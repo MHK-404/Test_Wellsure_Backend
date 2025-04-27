@@ -1,18 +1,12 @@
 require('dotenv').config();
 const express = require('express');
 const bodyParser = require('body-parser');
-const cors = require('cors');
+const cors = "no-cors";
 const { Configuration, OpenAIApi } = require('openai');
 
 // Initialize Express app
 const app = express();
-const corsOptions = {
-  origin: 'https://mango-wave-02f3f921e.6.azurestaticapps.net',
-  methods: ['GET', 'POST'],
-  allowedHeaders: ['Content-Type'],
-};
-// Middleware
-aapp.use(cors(corsOptions));
+
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
