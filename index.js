@@ -2,7 +2,6 @@ require('dotenv').config();
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
-const fetch = require('node-fetch'); // For API calls to OpenAI (ChatGPT)
 const { Configuration, OpenAIApi } = require('openai');
 
 // Initialize Express app
@@ -36,13 +35,16 @@ app.post('/submit', async (req, res) => {
     // Calculate BMI
     const bmi = (weight / Math.pow(height, 2)).toFixed(2);
 
-    // Calculate total risk score (out of 1000)
+    // Add BMI into formData for better recommendations
+    formData.bmi = bmi;
+
+    // Calculate total risk score
     const riskScore = calculateRiskScore(physicalHealthScore, mentalHealthScore, bmi);
 
-    // Get AI-generated recommendations for the form responses
+    // Get AI-generated recommendations
     const recommendationText = await generateRecommendations(formData);
 
-    // AI-generated feedback for text questions
+    // Get AI feedback
     const textFeedback = await getAITextFeedback(textQuestion1, textQuestion2);
 
     // Return response
@@ -60,10 +62,9 @@ app.post('/submit', async (req, res) => {
 
 // Function to calculate risk score
 function calculateRiskScore(physicalScore, mentalScore, bmi) {
-  // This is just a simplified model of scoring. Modify as per your logic.
   let score = (parseInt(physicalScore) + parseInt(mentalScore)) / 2;
-  score -= bmi * 10; // Adjust score based on BMI
-  score = Math.max(0, Math.min(1000, score)); // Ensure score is between 0 and 1000
+  score -= bmi * 10;
+  score = Math.max(0, Math.min(1000, score));
   return score;
 }
 
@@ -76,6 +77,7 @@ async function generateRecommendations(formData) {
     - Mental Health Score: ${formData.mentalHealthScore}
     - BMI: ${formData.bmi}
   `;
+
   const completion = await openai.createCompletion({
     model: "text-davinci-003",
     prompt: prompt,
@@ -89,9 +91,10 @@ async function generateRecommendations(formData) {
 async function getAITextFeedback(question1, question2) {
   const prompt = `
     Based on the answers to the following questions, generate feedback:
-    - Question 1: ${question1}
-    - Question 2: ${question2}
+    - How have you been feeling: ${question1}
+    - Environment description: ${question2}
   `;
+
   const completion = await openai.createCompletion({
     model: "text-davinci-003",
     prompt: prompt,
