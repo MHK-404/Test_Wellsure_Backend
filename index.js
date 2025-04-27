@@ -1,114 +1,108 @@
-// Load environment variables from .env file
-require('dotenv').config();  // This loads your .env file and makes the variables available
-
+require('dotenv').config();
 const express = require('express');
-const cors = require('cors');
 const bodyParser = require('body-parser');
-const axios = require('axios');
-const app = express();
-const port = process.env.PORT || 3000;
+const cors = require('cors');
+const fetch = require('node-fetch'); // For API calls to OpenAI (ChatGPT)
+const { Configuration, OpenAIApi } = require('openai');
 
+// Initialize Express app
+const app = express();
+
+// Middleware
 app.use(cors());
 app.use(bodyParser.json());
-app.use(express.static('public'));
+app.use(bodyParser.urlencoded({ extended: true }));
 
-// Serve the welcome page
-app.get('/welcome', (req, res) => {
-    res.sendFile(__dirname + '/welcome.html');
+// OpenAI Configuration
+const configuration = new Configuration({
+  apiKey: process.env.OPENAI_API_KEY,
 });
+const openai = new OpenAIApi(configuration);
 
-// Serve the questionnaire page
-app.get('/questionnaire', (req, res) => {
-    res.sendFile(__dirname + '/questionnaire.html');
-});
-
-// Serve the results page
-app.get('/results', (req, res) => {
-    res.sendFile(__dirname + '/results.html');
-});
-
-// Endpoint to handle the form submission
+// POST route to handle form submissions
 app.post('/submit', async (req, res) => {
-    const data = req.body;
+  try {
+    const formData = req.body;
+    const {
+      weight,
+      height,
+      chronicDisorders,
+      physicalHealthScore,
+      mentalHealthScore,
+      textQuestion1,
+      textQuestion2,
+    } = formData;
 
-    // Physical Health Calculations
-    const weight = parseFloat(data.weight);
-    const height = parseFloat(data.height) / 100;  // Convert cm to meters
-    const bmi = weight / (height * height);
+    // Calculate BMI
+    const bmi = (weight / Math.pow(height, 2)).toFixed(2);
 
-    // Mental Health Score (scale 1 to 10, higher is worse)
-    const stressLevel = parseInt(data.stress) || 0;
-    const sleepHours = parseInt(data.sleep) || 0;
+    // Calculate total risk score (out of 1000)
+    const riskScore = calculateRiskScore(physicalHealthScore, mentalHealthScore, bmi);
 
-    // Calculate Risk Score out of 1000
-    let riskScore = 1000;
-    riskScore -= bmi > 25 ? 150 : 0;  // Deduct for high BMI
-    riskScore -= stressLevel * 20;  // Deduct for stress
-    riskScore -= sleepHours < 6 ? 100 : 0;  // Deduct for insufficient sleep
+    // Get AI-generated recommendations for the form responses
+    const recommendationText = await generateRecommendations(formData);
 
-    // Mental and Physical Health Scores
-    const physicalScore = Math.max(0, 1000 - bmi * 10); // Adjust physical score based on BMI
-    const mentalScore = Math.max(0, 1000 - stressLevel * 30); // Adjust mental score based on stress
+    // AI-generated feedback for text questions
+    const textFeedback = await getAITextFeedback(textQuestion1, textQuestion2);
 
-    // AI-generated recommendations and feedback (using OpenAI)
-    const recommendations = await getRecommendations(data.feelings, data.environment);
-    const textFeedback = await generateTextFeedback(data.feelings, data.environment);
-
-    // Send back the results
+    // Return response
     res.json({
-        riskScore,
-        physicalScore,
-        mentalScore,
-        recommendations,
-        textFeedback
+      riskScore,
+      recommendations: recommendationText,
+      textFeedback,
+      bmi,
     });
+  } catch (error) {
+    console.error('Error handling form submission:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
-// Function to get recommendations from OpenAI
-async function getRecommendations(feelings, environment) {
-    try {
-        const response = await axios.post('https://api.openai.com/v1/completions', {
-            model: 'text-davinci-003',
-            prompt: `Generate health recommendations based on the following input: \nFeelings: ${feelings}\nEnvironment: ${environment}`,
-            max_tokens: 150,
-            temperature: 0.7
-        }, {
-            headers: {
-                'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
-                'Content-Type': 'application/json'
-            }
-        });
-
-        return response.data.choices[0].text.trim().split("\n").map(item => item.trim()).filter(item => item);
-    } catch (error) {
-        console.error('Error generating recommendations:', error);
-        return ["Exercise regularly to improve physical health.", "Reduce stress through relaxation techniques.", "Get more sleep for better well-being."];
-    }
+// Function to calculate risk score
+function calculateRiskScore(physicalScore, mentalScore, bmi) {
+  // This is just a simplified model of scoring. Modify as per your logic.
+  let score = (parseInt(physicalScore) + parseInt(mentalScore)) / 2;
+  score -= bmi * 10; // Adjust score based on BMI
+  score = Math.max(0, Math.min(1000, score)); // Ensure score is between 0 and 1000
+  return score;
 }
 
-// Function to generate feedback based on text answers using OpenAI
-async function generateTextFeedback(feelings, environment) {
-    try {
-        const response = await axios.post('https://api.openai.com/v1/completions', {
-            model: 'text-davinci-003',
-            prompt: `Provide personalized feedback based on the following input:\nFeelings: ${feelings}\nEnvironment: ${environment}`,
-            max_tokens: 200,
-            temperature: 0.7
-        }, {
-            headers: {
-                'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
-                'Content-Type': 'application/json'
-            }
-        });
+// Function to generate recommendations using OpenAI
+async function generateRecommendations(formData) {
+  const prompt = `
+    Based on the following data, generate health and lifestyle recommendations:
+    - Chronic disorders: ${formData.chronicDisorders}
+    - Physical Health Score: ${formData.physicalHealthScore}
+    - Mental Health Score: ${formData.mentalHealthScore}
+    - BMI: ${formData.bmi}
+  `;
+  const completion = await openai.createCompletion({
+    model: "text-davinci-003",
+    prompt: prompt,
+    max_tokens: 150,
+  });
 
-        return response.data.choices[0].text.trim();
-    } catch (error) {
-        console.error('Error generating text feedback:', error);
-        return `Your emotional state in the past week has been described as: ${feelings}. You live in an environment where: ${environment}. It would be beneficial to reflect on these and make adjustments to your lifestyle accordingly.`;
-    }
+  return completion.data.choices[0].text.trim();
+}
+
+// Function to generate AI feedback for text responses
+async function getAITextFeedback(question1, question2) {
+  const prompt = `
+    Based on the answers to the following questions, generate feedback:
+    - Question 1: ${question1}
+    - Question 2: ${question2}
+  `;
+  const completion = await openai.createCompletion({
+    model: "text-davinci-003",
+    prompt: prompt,
+    max_tokens: 150,
+  });
+
+  return completion.data.choices[0].text.trim();
 }
 
 // Start the server
+const port = process.env.PORT || 3000;
 app.listen(port, () => {
-    console.log(`Server is running on port ${port}`);
+  console.log(`Server running on port ${port}`);
 });
