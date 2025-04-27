@@ -1,25 +1,35 @@
-require('dotenv').config();
 const express = require('express');
+const cors = require('cors');
 const bodyParser = require('body-parser');
-const cors = "no-cors";
 const { Configuration, OpenAIApi } = require('openai');
 
-// Initialize Express app
 const app = express();
 
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
-
-// OpenAI Configuration
+// Initialize OpenAI API
 const configuration = new Configuration({
-  apiKey: process.env.OPENAI_API_KEY,
+  apiKey: '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',  // Replace with your actual API key from OpenAI
 });
 const openai = new OpenAIApi(configuration);
 
-// POST route to handle form submissions
+// CORS settings (allow frontend requests)
+app.use(cors({
+  origin: '*', // In production, replace * with your frontend URL
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
+// Body parser
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
+
+// Root test route
+app.get('/', (req, res) => {
+  res.send('Backend server is up and running!');
+});
+
+// Main /submit route
 app.post('/submit', async (req, res) => {
   try {
-    const formData = req.body;
     const {
       weight,
       height,
@@ -27,82 +37,67 @@ app.post('/submit', async (req, res) => {
       physicalHealthScore,
       mentalHealthScore,
       textQuestion1,
-      textQuestion2,
-    } = formData;
+      textQuestion2
+    } = req.body;
 
     // Calculate BMI
-    const bmi = (weight / Math.pow(height, 2)).toFixed(2);
+    const bmi = (weight / (height * height)).toFixed(2);
 
-    // Add BMI into formData for better recommendations
-    formData.bmi = bmi;
+    // Risk Score Calculation
+    let score = (parseInt(physicalHealthScore) + parseInt(mentalHealthScore)) / 2;
+    score -= bmi * 10;
+    score = Math.max(0, Math.min(1000, score)); // Clamp between 0 and 1000
 
-    // Calculate total risk score
-    const riskScore = calculateRiskScore(physicalHealthScore, mentalHealthScore, bmi);
+    // Generate ChatGPT Recommendations
+    const chatGptRecommendations = await getChatGptRecommendations(chronicDisorders, bmi);
 
-    // Get AI-generated recommendations
-    const recommendationText = await generateRecommendations(formData);
+    // Generate basic feedback based on text
+    const textFeedback = generateTextFeedback(textQuestion1, textQuestion2);
 
-    // Get AI feedback
-    const textFeedback = await getAITextFeedback(textQuestion1, textQuestion2);
-
-    // Return response
     res.json({
-      riskScore,
-      recommendations: recommendationText,
-      textFeedback,
-      bmi,
+      riskScore: score,
+      bmi: bmi,
+      recommendations: chatGptRecommendations,
+      textFeedback: textFeedback
     });
+
   } catch (error) {
-    console.error('Error handling form submission:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('Error:', error);
+    res.status(500).json({ error: 'Server error' });
   }
 });
 
-// Function to calculate risk score
-function calculateRiskScore(physicalScore, mentalScore, bmi) {
-  let score = (parseInt(physicalScore) + parseInt(mentalScore)) / 2;
-  score -= bmi * 10;
-  score = Math.max(0, Math.min(1000, score));
-  return score;
+// Function to generate recommendations from ChatGPT
+async function getChatGptRecommendations(chronicDisorders, bmi) {
+  try {
+    const prompt = `Generate health recommendations based on the following:
+    - Chronic disorders: ${chronicDisorders}
+    - BMI: ${bmi}
+    Provide tailored advice for managing health and wellness.`;
+
+    const response = await openai.createCompletion({
+      model: 'text-davinci-003',  // You can adjust to any available GPT model
+      prompt: prompt,
+      max_tokens: 150,
+      temperature: 0.7,
+    });
+
+    return response.data.choices[0].text.trim().split("\n");
+  } catch (error) {
+    console.error('Error fetching ChatGPT recommendations:', error);
+    return ['Unable to generate AI recommendations at this time.'];
+  }
 }
 
-// Function to generate recommendations using OpenAI
-async function generateRecommendations(formData) {
-  const prompt = `
-    Based on the following data, generate health and lifestyle recommendations:
-    - Chronic disorders: ${formData.chronicDisorders}
-    - Physical Health Score: ${formData.physicalHealthScore}
-    - Mental Health Score: ${formData.mentalHealthScore}
-    - BMI: ${formData.bmi}
-  `;
-
-  const completion = await openai.createCompletion({
-    model: "text-davinci-003",
-    prompt: prompt,
-    max_tokens: 150,
-  });
-
-  return completion.data.choices[0].text.trim();
+// Helper: generate basic feedback
+function generateTextFeedback(text1, text2) {
+  if (text1.toLowerCase().includes('tired') || text2.toLowerCase().includes('noisy')) {
+    return 'Consider getting enough rest and creating a calmer environment.';
+  }
+  return 'Your mental and environmental health seem stable. Keep monitoring!';
 }
 
-// Function to generate AI feedback for text responses
-async function getAITextFeedback(question1, question2) {
-  const prompt = `
-    Based on the answers to the following questions, generate feedback:
-    - How have you been feeling: ${question1}
-    - Environment description: ${question2}
-  `;
-
-  const completion = await openai.createCompletion({
-    model: "text-davinci-003",
-    prompt: prompt,
-    max_tokens: 150,
-  });
-
-  return completion.data.choices[0].text.trim();
-}
-
-// Start the server
+// Start server
 const port = process.env.PORT || 3000;
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
