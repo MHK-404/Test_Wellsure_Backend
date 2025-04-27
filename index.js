@@ -1,128 +1,96 @@
+require('dotenv').config();
 const express = require('express');
 const bodyParser = require('body-parser');
-const cors = require('cors');
+const { Configuration, OpenAIApi } = require('openai');
+const pdfkit = require('pdfkit');
+const fs = require('fs');
+
 const app = express();
+const port = 3000;
 
-app.use(cors());
+// Middleware to parse POST request bodies
 app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
 
-// Calculate BMI
-function calculateBMI(weight, height) {
-    const heightInMeters = height / 100;
-    return weight / (heightInMeters * heightInMeters);
-}
+// Set up OpenAI API
+const configuration = new Configuration({
+  apiKey: process.env.OPENAI_API_KEY, // Replace with your OpenAI API key
+});
+const openai = new OpenAIApi(configuration);
 
-// Calculate physical health score (0-500)
-function calculatePhysicalScore(answers) {
-    let score = 0;
-    
-    // Exercise
-    score += answers.exercise * 20;
-    
-    // Diet
-    score += answers.diet === 'healthy' ? 100 : answers.diet === 'average' ? 50 : 0;
-    
-    // Sleep
-    if (answers.sleep >= 7 && answers.sleep <= 9) score += 100;
-    else if (answers.sleep >= 6 || answers.sleep === 10) score += 50;
-    
-    // BMI adjustment
-    const bmi = calculateBMI(answers.weight, answers.height);
-    if (bmi < 18.5 || bmi > 25) score -= 50;
-    if (bmi < 16 || bmi > 30) score -= 100;
-    
-    // Other factors
-    score += answers.checkups === 'regular' ? 50 : 0;
-    score += answers.water >= 8 ? 50 : 0;
-    score += answers.energy === 'high' ? 50 : answers.energy === 'medium' ? 25 : 0;
-    score += answers.smoke ? -100 : 0;
-    
-    return Math.max(0, Math.min(500, score));
-}
-
-// Calculate mental health score (0-500)
-function calculateMentalScore(answers) {
-    let score = 500; // Start with max and subtract
-    
-    // Stress
-    score -= answers.stress * 50;
-    
-    // Mood
-    score -= answers.mood === 'low' ? 100 : answers.mood === 'medium' ? 50 : 0;
-    
-    // Other factors
-    score -= answers.support === 'none' ? 100 : answers.support === 'some' ? 50 : 0;
-    score -= answers.focus === 'poor' ? 50 : 0;
-    score -= answers.loneliness * 30;
-    
-    return Math.max(0, score);
-}
-
-// Analyze sentiment
-function analyzeSentiment(text) {
-    const positiveWords = ['happy', 'good', 'great', 'joy', 'love', 'calm', 'peaceful'];
-    const negativeWords = ['sad', 'bad', 'terrible', 'angry', 'hate', 'anxious', 'stress'];
-    
-    let positive = 0;
-    let negative = 0;
-    
-    const words = text.toLowerCase().split(/\s+/);
-    words.forEach(word => {
-        if (positiveWords.includes(word)) positive++;
-        if (negativeWords.includes(word)) negative++;
-    });
-    
-    const score = (positive - negative) / words.length * 100;
-    return {
-        score: score,
-        sentiment: score > 0 ? 'positive' : score < 0 ? 'negative' : 'neutral',
-        positiveWords: positive,
-        negativeWords: negative
-    };
-}
-
-// API Endpoints
-app.post('/api/calculate-score', (req, res) => {
-    const { physical, mental } = req.body;
-    
-    const physicalScore = calculatePhysicalScore(physical);
-    const mentalScore = calculateMentalScore(mental);
-    const totalScore = Math.round(physicalScore + mentalScore);
-    
-    res.json({
-        physicalScore: physicalScore,
-        mentalScore: mentalScore,
-        totalScore: totalScore,
-        riskCategory: getRiskCategory(totalScore)
-    });
+// Route for the welcome page
+app.get('/', (req, res) => {
+  res.send('Welcome to Wellsure! This is the risk assessment tool.');
 });
 
-app.post('/api/analyze-feelings', (req, res) => {
-    const { text } = req.body;
-    const analysis = analyzeSentiment(text);
-    
-    res.json({
-        analysis: analysis,
-        recommendations: generateFeelingsRecommendations(analysis)
-    });
+// Route for the questionnaire page
+app.post('/questionnaire', async (req, res) => {
+  const { physicalHealthAnswers, mentalHealthAnswers, textAnswers, height, weight } = req.body;
+
+  // Calculate BMI
+  const bmi = (weight / (height * height)).toFixed(2);
+
+  // Calculate risk score (this is a simplified version, you can adjust it)
+  let riskScore = 1000; // Default value
+
+  // Example: Adjust risk score based on BMI and health answers
+  if (bmi > 30) riskScore -= 100; // Obese BMI adjustment
+  if (physicalHealthAnswers.some(answer => answer === 'poor')) riskScore -= 150;
+  if (mentalHealthAnswers.some(answer => answer === 'poor')) riskScore -= 150;
+
+  // Generate recommendations based on answers using ChatGPT
+  const recommendations = await generateRecommendations(physicalHealthAnswers, mentalHealthAnswers, textAnswers);
+
+  // Send response with risk score and recommendations
+  res.json({
+    riskScore,
+    recommendations,
+    bmi,
+  });
 });
 
-function getRiskCategory(score) {
-    if (score <= 199) return 'Excellent';
-    if (score <= 399) return 'Good';
-    if (score <= 599) return 'Moderate';
-    if (score <= 799) return 'High';
-    return 'Very High';
+// Function to generate AI recommendations using ChatGPT
+async function generateRecommendations(physicalHealthAnswers, mentalHealthAnswers, textAnswers) {
+  const prompt = `
+    Based on the following responses, generate personalized health and lifestyle recommendations:
+    Physical Health Answers: ${JSON.stringify(physicalHealthAnswers)}
+    Mental Health Answers: ${JSON.stringify(mentalHealthAnswers)}
+    Text Answers: ${JSON.stringify(textAnswers)}
+  `;
+
+  const completion = await openai.createCompletion({
+    model: 'text-davinci-003',
+    prompt: prompt,
+    max_tokens: 500,
+  });
+
+  return completion.data.choices[0].text;
 }
 
-function generateFeelingsRecommendations(analysis) {
-    if (analysis.sentiment === 'positive') {
-        return "Your positive outlook is great for your wellbeing. Consider journaling to maintain this mindset.";
-    } else if (analysis.sentiment === 'negative') {
-        return "Your responses suggest some negative feelings. Mindfulness exercises may help improve your outlook.";
-    }
-    return "Your feelings seem balanced. Reflect on what brings you joy and what causes stress.";
-}
+// Route to generate PDF summary
+app.post('/generate-pdf', (req, res) => {
+  const { riskScore, recommendations, bmi } = req.body;
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+  const doc = new pdfkit();
+  const filename = `Risk_Summary_${Date.now()}.pdf`;
+  const filePath = `./${filename}`;
+
+  doc.pipe(fs.createWriteStream(filePath));
+
+  doc.fontSize(18).text(`Wellsure Risk Assessment Summary`, { align: 'center' });
+  doc.moveDown();
+  doc.fontSize(14).text(`Risk Score: ${riskScore}`);
+  doc.text(`BMI: ${bmi}`);
+  doc.moveDown();
+  doc.text(`Recommendations:`);
+  doc.fontSize(12).text(recommendations);
+
+  doc.end();
+
+  res.json({ success: true, filePath });
+});
+
+// Start the server
+app.listen(port, () => {
+  console.log(`Backend running on http://localhost:${port}`);
+});
