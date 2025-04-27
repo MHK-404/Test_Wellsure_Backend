@@ -13,7 +13,7 @@ const openai = new OpenAIApi(configuration);
 
 // CORS settings (allow frontend requests)
 app.use(cors({
-  origin: '*', // In production, replace * with your frontend URL
+  origin: 'https://mango-wave-02f3f921e.6.azurestaticapps.net', // In production, replace * with your frontend URL
   methods: ['GET', 'POST', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
