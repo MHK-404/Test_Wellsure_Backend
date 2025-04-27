@@ -1,174 +1,128 @@
-import express from 'express';
-import cors from 'cors';
-import morgan from 'morgan';
-
+const express = require('express');
+const bodyParser = require('body-parser');
+const cors = require('cors');
 const app = express();
-const PORT = process.env.PORT || 3000;
 
-app.use(cors({
-  origin: 'https://mango-wave-02f3f921e.6.azurestaticapps.net',
-  methods: ['POST'],
-  credentials: false
-}));
+app.use(cors());
+app.use(bodyParser.json());
 
-app.use(express.json());
-app.use(morgan('dev'));
-
-// Risk calculation logic
-function calculateRisk(data) {
-  let riskScore = 0;
-  let recommendations = [];
-  let physicalScore = 100;
-  let mentalScore = 100;
-  let lifestyleScore = 100;
-
-  // Age calculation
-  if (data.age < 25) riskScore += 1;
-  else if (data.age < 40) riskScore += 2;
-  else if (data.age < 60) riskScore += 3;
-  else riskScore += 4;
-  physicalScore -= riskScore * 2;
-
-  // Smoking calculation
-  if (data.smoke.includes('Yes')) {
-    riskScore += 3;
-    physicalScore -= 15;
-    recommendations.push("Consider enrolling in a smoking cessation program or support group.");
-
-    if (data.smokeAmount) {
-      if (data.smokeAmount.includes('More than 20')) {
-        riskScore += 2;
-        physicalScore -= 10;
-      }
-      else if (data.smokeAmount.includes('10-20')) {
-        riskScore += 1.5;
-        physicalScore -= 7;
-      }
-      else if (data.smokeAmount.includes('5-10')) {
-        riskScore += 1;
-        physicalScore -= 5;
-      }
-    }
-  }
-
-  // Chronic Conditions
-  const conditions = Array.isArray(data.conditions) ? data.conditions : [data.conditions];
-  if (!conditions.includes('none')) {
-    riskScore += conditions.length * 2;
-    physicalScore -= conditions.length * 5;
-    recommendations.push("Maintain regular check-ups and follow treatment plans for any chronic condition(s).");
-  }
-
-  // BMI calculation
-  const heightM = (parseFloat(data.height) || 0) / 100;
-  const weight = parseFloat(data.weight) || 0;
-  if (heightM > 0 && weight > 0) {
-    const bmi = weight / (heightM * heightM);
-    if (bmi < 18.5) {
-      riskScore += 1;
-      physicalScore -= 5;
-      recommendations.push("You may be underweight. Consider nutritional guidance.");
-    } else if (bmi >= 25 && bmi < 30) {
-      riskScore += 1;
-      physicalScore -= 5;
-      recommendations.push("You are overweight. A balanced diet and exercise plan could be beneficial.");
-    } else if (bmi >= 30) {
-      riskScore += 2;
-      physicalScore -= 10;
-      recommendations.push("Obesity increases risk for many conditions. Consider professional health advice.");
-    }
-  }
-
-  // Stress & Mental Health
-  const stress = parseInt(data.stress) || 5;
-  riskScore += Math.floor(stress / 3);
-  mentalScore -= stress * 3;
-  if (stress > 5) recommendations.push("Practice stress management techniques regularly.");
-
-  const mentalIssues = Array.isArray(data.mentalIssues) ? data.mentalIssues : [data.mentalIssues];
-  if (!mentalIssues.includes('none')) {
-    riskScore += mentalIssues.length;
-    mentalScore -= mentalIssues.length * 5;
-    recommendations.push("Consider speaking with a mental health professional about symptoms like anxiety, depression, or insomnia.");
-  }
-
-  // Lifestyle factors
-  if (data.screenTime && data.screenTime.includes('More than 6')) {
-    riskScore += 1;
-    lifestyleScore -= 5;
-  }
-  
-  if (data.vacations && data.vacations.includes('Never')) {
-    riskScore += 1;
-    lifestyleScore -= 5;
-    recommendations.push("Taking breaks and vacations can improve well-being. Consider planning occasional time off.");
-  }
-
-  if (data.sleep && data.sleep.includes('Less than 5')) {
-    riskScore += 2;
-    lifestyleScore -= 10;
-    recommendations.push("Aim for at least 7 hours of quality sleep each night.");
-  }
-
-  if (data.diet && data.diet.includes('Poor')) {
-    riskScore += 2;
-    lifestyleScore -= 10;
-    recommendations.push("A healthier diet rich in whole foods can greatly improve overall health.");
-  }
-
-  if (data.exercise && data.exercise.includes('Never')) {
-    riskScore += 2;
-    lifestyleScore -= 15;
-    recommendations.push("Regular physical activity can help reduce risk. Try starting small with daily walks.");
-  }
-
-  // Calculate final scores (ensure they don't go below 0)
-  physicalScore = Math.max(0, physicalScore);
-  mentalScore = Math.max(0, mentalScore);
-  lifestyleScore = Math.max(0, lifestyleScore);
-
-  // Risk category
-  let riskCategory;
-  if (riskScore < 10) riskCategory = "Low Risk";
-  else if (riskScore < 20) riskCategory = "Moderate Risk";
-  else riskCategory = "High Risk";
-
-  if (recommendations.length === 0) {
-    recommendations.push("Your health profile looks good! Keep up the great habits.");
-  }
-
-  return { 
-    riskScore, 
-    riskCategory, 
-    recommendations,
-    physicalScore: Math.round(physicalScore),
-    mentalScore: Math.round(mentalScore),
-    lifestyleScore: Math.round(lifestyleScore)
-  };
+// Calculate BMI
+function calculateBMI(weight, height) {
+    const heightInMeters = height / 100;
+    return weight / (heightInMeters * heightInMeters);
 }
 
-// API endpoint
-app.post('/assess', (req, res) => {
-  try {
-    const riskData = calculateRisk(req.body);
+// Calculate physical health score (0-500)
+function calculatePhysicalScore(answers) {
+    let score = 0;
+    
+    // Exercise
+    score += answers.exercise * 20;
+    
+    // Diet
+    score += answers.diet === 'healthy' ? 100 : answers.diet === 'average' ? 50 : 0;
+    
+    // Sleep
+    if (answers.sleep >= 7 && answers.sleep <= 9) score += 100;
+    else if (answers.sleep >= 6 || answers.sleep === 10) score += 50;
+    
+    // BMI adjustment
+    const bmi = calculateBMI(answers.weight, answers.height);
+    if (bmi < 18.5 || bmi > 25) score -= 50;
+    if (bmi < 16 || bmi > 30) score -= 100;
+    
+    // Other factors
+    score += answers.checkups === 'regular' ? 50 : 0;
+    score += answers.water >= 8 ? 50 : 0;
+    score += answers.energy === 'high' ? 50 : answers.energy === 'medium' ? 25 : 0;
+    score += answers.smoke ? -100 : 0;
+    
+    return Math.max(0, Math.min(500, score));
+}
+
+// Calculate mental health score (0-500)
+function calculateMentalScore(answers) {
+    let score = 500; // Start with max and subtract
+    
+    // Stress
+    score -= answers.stress * 50;
+    
+    // Mood
+    score -= answers.mood === 'low' ? 100 : answers.mood === 'medium' ? 50 : 0;
+    
+    // Other factors
+    score -= answers.support === 'none' ? 100 : answers.support === 'some' ? 50 : 0;
+    score -= answers.focus === 'poor' ? 50 : 0;
+    score -= answers.loneliness * 30;
+    
+    return Math.max(0, score);
+}
+
+// Analyze sentiment
+function analyzeSentiment(text) {
+    const positiveWords = ['happy', 'good', 'great', 'joy', 'love', 'calm', 'peaceful'];
+    const negativeWords = ['sad', 'bad', 'terrible', 'angry', 'hate', 'anxious', 'stress'];
+    
+    let positive = 0;
+    let negative = 0;
+    
+    const words = text.toLowerCase().split(/\s+/);
+    words.forEach(word => {
+        if (positiveWords.includes(word)) positive++;
+        if (negativeWords.includes(word)) negative++;
+    });
+    
+    const score = (positive - negative) / words.length * 100;
+    return {
+        score: score,
+        sentiment: score > 0 ? 'positive' : score < 0 ? 'negative' : 'neutral',
+        positiveWords: positive,
+        negativeWords: negative
+    };
+}
+
+// API Endpoints
+app.post('/api/calculate-score', (req, res) => {
+    const { physical, mental } = req.body;
+    
+    const physicalScore = calculatePhysicalScore(physical);
+    const mentalScore = calculateMentalScore(mental);
+    const totalScore = Math.round(physicalScore + mentalScore);
+    
     res.json({
-      status: 'success',
-      riskCategory: riskData.riskCategory,
-      riskScore: riskData.riskScore,
-      recommendations: riskData.recommendations,
-      physicalScore: riskData.physicalScore,
-      mentalScore: riskData.mentalScore,
-      lifestyleScore: riskData.lifestyleScore
+        physicalScore: physicalScore,
+        mentalScore: mentalScore,
+        totalScore: totalScore,
+        riskCategory: getRiskCategory(totalScore)
     });
-  } catch (error) {
-    console.error('Assessment error:', error);
-    res.status(500).json({
-      status: 'error',
-      message: 'An error occurred during risk assessment'
-    });
-  }
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+app.post('/api/analyze-feelings', (req, res) => {
+    const { text } = req.body;
+    const analysis = analyzeSentiment(text);
+    
+    res.json({
+        analysis: analysis,
+        recommendations: generateFeelingsRecommendations(analysis)
+    });
 });
+
+function getRiskCategory(score) {
+    if (score <= 199) return 'Excellent';
+    if (score <= 399) return 'Good';
+    if (score <= 599) return 'Moderate';
+    if (score <= 799) return 'High';
+    return 'Very High';
+}
+
+function generateFeelingsRecommendations(analysis) {
+    if (analysis.sentiment === 'positive') {
+        return "Your positive outlook is great for your wellbeing. Consider journaling to maintain this mindset.";
+    } else if (analysis.sentiment === 'negative') {
+        return "Your responses suggest some negative feelings. Mindfulness exercises may help improve your outlook.";
+    }
+    return "Your feelings seem balanced. Reflect on what brings you joy and what causes stress.";
+}
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
