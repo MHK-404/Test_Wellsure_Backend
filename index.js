@@ -8,7 +8,9 @@ const { Configuration, OpenAIApi } = require('openai');
 const app = express();
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: 'https://mango-wave-02f3f921e.6.azurestaticapps.net'
+}));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
