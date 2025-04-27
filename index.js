@@ -1,96 +1,114 @@
-require('dotenv').config();
+// Load environment variables from .env file
+require('dotenv').config();  // This loads your .env file and makes the variables available
+
 const express = require('express');
+const cors = require('cors');
 const bodyParser = require('body-parser');
-const { Configuration, OpenAIApi } = require('openai');
-const pdfkit = require('pdfkit');
-const fs = require('fs');
-
+const axios = require('axios');
 const app = express();
-const port = 3000;
+const port = process.env.PORT || 3000;
 
-// Middleware to parse POST request bodies
+app.use(cors());
 app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
+app.use(express.static('public'));
 
-// Set up OpenAI API
-const configuration = new Configuration({
-  apiKey: process.env.OPENAI_API_KEY, // Replace with your OpenAI API key
-});
-const openai = new OpenAIApi(configuration);
-
-// Route for the welcome page
-app.get('/', (req, res) => {
-  res.send('Welcome to Wellsure! This is the risk assessment tool.');
+// Serve the welcome page
+app.get('/welcome', (req, res) => {
+    res.sendFile(__dirname + '/welcome.html');
 });
 
-// Route for the questionnaire page
-app.post('/questionnaire', async (req, res) => {
-  const { physicalHealthAnswers, mentalHealthAnswers, textAnswers, height, weight } = req.body;
-
-  // Calculate BMI
-  const bmi = (weight / (height * height)).toFixed(2);
-
-  // Calculate risk score (this is a simplified version, you can adjust it)
-  let riskScore = 1000; // Default value
-
-  // Example: Adjust risk score based on BMI and health answers
-  if (bmi > 30) riskScore -= 100; // Obese BMI adjustment
-  if (physicalHealthAnswers.some(answer => answer === 'poor')) riskScore -= 150;
-  if (mentalHealthAnswers.some(answer => answer === 'poor')) riskScore -= 150;
-
-  // Generate recommendations based on answers using ChatGPT
-  const recommendations = await generateRecommendations(physicalHealthAnswers, mentalHealthAnswers, textAnswers);
-
-  // Send response with risk score and recommendations
-  res.json({
-    riskScore,
-    recommendations,
-    bmi,
-  });
+// Serve the questionnaire page
+app.get('/questionnaire', (req, res) => {
+    res.sendFile(__dirname + '/questionnaire.html');
 });
 
-// Function to generate AI recommendations using ChatGPT
-async function generateRecommendations(physicalHealthAnswers, mentalHealthAnswers, textAnswers) {
-  const prompt = `
-    Based on the following responses, generate personalized health and lifestyle recommendations:
-    Physical Health Answers: ${JSON.stringify(physicalHealthAnswers)}
-    Mental Health Answers: ${JSON.stringify(mentalHealthAnswers)}
-    Text Answers: ${JSON.stringify(textAnswers)}
-  `;
+// Serve the results page
+app.get('/results', (req, res) => {
+    res.sendFile(__dirname + '/results.html');
+});
 
-  const completion = await openai.createCompletion({
-    model: 'text-davinci-003',
-    prompt: prompt,
-    max_tokens: 500,
-  });
+// Endpoint to handle the form submission
+app.post('/submit', async (req, res) => {
+    const data = req.body;
 
-  return completion.data.choices[0].text;
+    // Physical Health Calculations
+    const weight = parseFloat(data.weight);
+    const height = parseFloat(data.height) / 100;  // Convert cm to meters
+    const bmi = weight / (height * height);
+
+    // Mental Health Score (scale 1 to 10, higher is worse)
+    const stressLevel = parseInt(data.stress) || 0;
+    const sleepHours = parseInt(data.sleep) || 0;
+
+    // Calculate Risk Score out of 1000
+    let riskScore = 1000;
+    riskScore -= bmi > 25 ? 150 : 0;  // Deduct for high BMI
+    riskScore -= stressLevel * 20;  // Deduct for stress
+    riskScore -= sleepHours < 6 ? 100 : 0;  // Deduct for insufficient sleep
+
+    // Mental and Physical Health Scores
+    const physicalScore = Math.max(0, 1000 - bmi * 10); // Adjust physical score based on BMI
+    const mentalScore = Math.max(0, 1000 - stressLevel * 30); // Adjust mental score based on stress
+
+    // AI-generated recommendations and feedback (using OpenAI)
+    const recommendations = await getRecommendations(data.feelings, data.environment);
+    const textFeedback = await generateTextFeedback(data.feelings, data.environment);
+
+    // Send back the results
+    res.json({
+        riskScore,
+        physicalScore,
+        mentalScore,
+        recommendations,
+        textFeedback
+    });
+});
+
+// Function to get recommendations from OpenAI
+async function getRecommendations(feelings, environment) {
+    try {
+        const response = await axios.post('https://api.openai.com/v1/completions', {
+            model: 'text-davinci-003',
+            prompt: `Generate health recommendations based on the following input: \nFeelings: ${feelings}\nEnvironment: ${environment}`,
+            max_tokens: 150,
+            temperature: 0.7
+        }, {
+            headers: {
+                'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        return response.data.choices[0].text.trim().split("\n").map(item => item.trim()).filter(item => item);
+    } catch (error) {
+        console.error('Error generating recommendations:', error);
+        return ["Exercise regularly to improve physical health.", "Reduce stress through relaxation techniques.", "Get more sleep for better well-being."];
+    }
 }
 
-// Route to generate PDF summary
-app.post('/generate-pdf', (req, res) => {
-  const { riskScore, recommendations, bmi } = req.body;
+// Function to generate feedback based on text answers using OpenAI
+async function generateTextFeedback(feelings, environment) {
+    try {
+        const response = await axios.post('https://api.openai.com/v1/completions', {
+            model: 'text-davinci-003',
+            prompt: `Provide personalized feedback based on the following input:\nFeelings: ${feelings}\nEnvironment: ${environment}`,
+            max_tokens: 200,
+            temperature: 0.7
+        }, {
+            headers: {
+                'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+                'Content-Type': 'application/json'
+            }
+        });
 
-  const doc = new pdfkit();
-  const filename = `Risk_Summary_${Date.now()}.pdf`;
-  const filePath = `./${filename}`;
-
-  doc.pipe(fs.createWriteStream(filePath));
-
-  doc.fontSize(18).text(`Wellsure Risk Assessment Summary`, { align: 'center' });
-  doc.moveDown();
-  doc.fontSize(14).text(`Risk Score: ${riskScore}`);
-  doc.text(`BMI: ${bmi}`);
-  doc.moveDown();
-  doc.text(`Recommendations:`);
-  doc.fontSize(12).text(recommendations);
-
-  doc.end();
-
-  res.json({ success: true, filePath });
-});
+        return response.data.choices[0].text.trim();
+    } catch (error) {
+        console.error('Error generating text feedback:', error);
+        return `Your emotional state in the past week has been described as: ${feelings}. You live in an environment where: ${environment}. It would be beneficial to reflect on these and make adjustments to your lifestyle accordingly.`;
+    }
+}
 
 // Start the server
 app.listen(port, () => {
-  console.log(`Backend running on http://localhost:${port}`);
+    console.log(`Server is running on port ${port}`);
 });
