@@ -16,37 +16,44 @@ app.use(morgan('dev'));
 
 // Risk calculation logic
 function calculateRisk(data) {
-  let riskScore = 0;
+  let riskScore = 500; // Start at midpoint (500/1000)
   let recommendations = [];
-  let physicalScore = 100;
-  let mentalScore = 100;
-  let lifestyleScore = 100;
+  let physicalScore = 1000;
+  let mentalScore = 1000;
 
   // Age calculation
-  if (data.age < 25) riskScore += 1;
-  else if (data.age < 40) riskScore += 2;
-  else if (data.age < 60) riskScore += 3;
-  else riskScore += 4;
-  physicalScore -= riskScore * 2;
+  if (data.age < 25) {
+    riskScore += 50;
+    physicalScore -= 50;
+  } else if (data.age < 40) {
+    riskScore += 100;
+    physicalScore -= 100;
+  } else if (data.age < 60) {
+    riskScore += 150;
+    physicalScore -= 150;
+  } else {
+    riskScore += 200;
+    physicalScore -= 200;
+  }
 
   // Smoking calculation
   if (data.smoke.includes('Yes')) {
-    riskScore += 3;
-    physicalScore -= 15;
-    recommendations.push("Consider enrolling in a smoking cessation program or support group.");
+    riskScore += 150;
+    physicalScore -= 200;
+    recommendations.push("🚭 Smoking significantly impacts your health risk profile. Consider enrolling in a smoking cessation program. Studies show quitting before age 40 reduces smoking-related death risk by 90%.");
 
     if (data.smokeAmount) {
       if (data.smokeAmount.includes('More than 20')) {
-        riskScore += 2;
-        physicalScore -= 10;
+        riskScore += 100;
+        physicalScore -= 150;
       }
       else if (data.smokeAmount.includes('10-20')) {
-        riskScore += 1.5;
-        physicalScore -= 7;
+        riskScore += 75;
+        physicalScore -= 100;
       }
       else if (data.smokeAmount.includes('5-10')) {
-        riskScore += 1;
-        physicalScore -= 5;
+        riskScore += 50;
+        physicalScore -= 75;
       }
     }
   }
@@ -54,9 +61,9 @@ function calculateRisk(data) {
   // Chronic Conditions
   const conditions = Array.isArray(data.conditions) ? data.conditions : [data.conditions];
   if (!conditions.includes('none')) {
-    riskScore += conditions.length * 2;
-    physicalScore -= conditions.length * 5;
-    recommendations.push("Maintain regular check-ups and follow treatment plans for any chronic condition(s).");
+    riskScore += conditions.length * 100;
+    physicalScore -= conditions.length * 150;
+    recommendations.push("🩺 Chronic conditions require careful management. Maintain regular check-ups with your healthcare provider and strictly follow treatment plans. Proper management can significantly reduce complications.");
   }
 
   // BMI calculation
@@ -65,85 +72,98 @@ function calculateRisk(data) {
   if (heightM > 0 && weight > 0) {
     const bmi = weight / (heightM * heightM);
     if (bmi < 18.5) {
-      riskScore += 1;
-      physicalScore -= 5;
-      recommendations.push("You may be underweight. Consider nutritional guidance.");
+      riskScore += 75;
+      physicalScore -= 100;
+      recommendations.push("📊 Your BMI suggests you may be underweight. Consult a nutritionist for personalized dietary advice. Underweight individuals may have increased risk of osteoporosis and fertility issues.");
     } else if (bmi >= 25 && bmi < 30) {
-      riskScore += 1;
-      physicalScore -= 5;
-      recommendations.push("You are overweight. A balanced diet and exercise plan could be beneficial.");
+      riskScore += 100;
+      physicalScore -= 150;
+      recommendations.push("⚖️ Your BMI indicates overweight status. A balanced diet with portion control and 150+ minutes of weekly exercise can help. Even 5-10% weight loss significantly reduces health risks.");
     } else if (bmi >= 30) {
-      riskScore += 2;
-      physicalScore -= 10;
-      recommendations.push("Obesity increases risk for many conditions. Consider professional health advice.");
+      riskScore += 200;
+      physicalScore -= 250;
+      recommendations.push("⚠️ Obesity increases risk for diabetes, heart disease, and joint problems. Consider consulting a bariatric specialist. Structured weight loss programs often achieve 8-10% weight reduction in 6 months.");
     }
+  }
+
+  // Exercise
+  if (data.exercise && data.exercise.includes('Never')) {
+    riskScore += 150;
+    physicalScore -= 200;
+    recommendations.push("🏃‍♂️ Sedentary lifestyle increases all-cause mortality by 20-30%. Start with 10-minute walks daily, gradually increasing to 30 minutes. Even light activity reduces cardiovascular risks.");
+  } else if (data.exercise && data.exercise.includes('1-2 times per week')) {
+    riskScore += 50;
+    physicalScore -= 75;
   }
 
   // Stress & Mental Health
   const stress = parseInt(data.stress) || 5;
-  riskScore += Math.floor(stress / 3);
-  mentalScore -= stress * 3;
-  if (stress > 5) recommendations.push("Practice stress management techniques regularly.");
+  riskScore += stress * 20;
+  mentalScore -= stress * 30;
+  
+  if (stress > 5) {
+    recommendations.push("🧘 Chronic stress increases cortisol levels, impacting immunity and heart health. Try mindfulness meditation - just 10 minutes daily can reduce stress markers by 30% within 8 weeks.");
+  }
 
   const mentalIssues = Array.isArray(data.mentalIssues) ? data.mentalIssues : [data.mentalIssues];
   if (!mentalIssues.includes('none')) {
-    riskScore += mentalIssues.length;
-    mentalScore -= mentalIssues.length * 5;
-    recommendations.push("Consider speaking with a mental health professional about symptoms like anxiety, depression, or insomnia.");
+    riskScore += mentalIssues.length * 75;
+    mentalScore -= mentalIssues.length * 100;
+    recommendations.push("🧠 Mental health is as important as physical health. Cognitive Behavioral Therapy (CBT) has 60-80% effectiveness for anxiety/depression. Many insurers cover 12-20 therapy sessions annually.");
+  }
+
+  // Sleep
+  if (data.sleep && data.sleep.includes('Less than 5')) {
+    riskScore += 150;
+    mentalScore -= 200;
+    physicalScore -= 150;
+    recommendations.push("😴 Chronic sleep deprivation increases Alzheimer's risk and impairs glucose metabolism. Establish a consistent bedtime routine and limit screen time before bed. 7-9 hours is optimal for adults.");
+  }
+
+  // Diet
+  if (data.diet && data.diet.includes('Poor')) {
+    riskScore += 125;
+    physicalScore -= 175;
+    recommendations.push("🥗 A diet high in processed foods increases inflammation. Transition to Mediterranean-style eating: emphasize vegetables, whole grains, healthy fats. Small changes like swapping soda for sparkling water make a difference.");
   }
 
   // Lifestyle factors
   if (data.screenTime && data.screenTime.includes('More than 6')) {
-    riskScore += 1;
-    lifestyleScore -= 5;
+    riskScore += 75;
+    mentalScore -= 100;
+    recommendations.push("💻 Excessive screen time disrupts circadian rhythms. Follow the 20-20-20 rule: every 20 minutes, look at something 20 feet away for 20 seconds. Consider blue light filters in evenings.");
   }
   
   if (data.vacations && data.vacations.includes('Never')) {
-    riskScore += 1;
-    lifestyleScore -= 5;
-    recommendations.push("Taking breaks and vacations can improve well-being. Consider planning occasional time off.");
+    riskScore += 100;
+    mentalScore -= 150;
+    recommendations.push("✈️ Regular breaks reduce burnout risk by 40%. Even 'staycations' or long weekends provide mental health benefits. Schedule downtime just as you would important meetings.");
   }
 
-  if (data.sleep && data.sleep.includes('Less than 5')) {
-    riskScore += 2;
-    lifestyleScore -= 10;
-    recommendations.push("Aim for at least 7 hours of quality sleep each night.");
-  }
+  // Ensure scores are within bounds
+  physicalScore = Math.max(0, Math.min(1000, physicalScore));
+  mentalScore = Math.max(0, Math.min(1000, mentalScore));
+  riskScore = Math.max(0, Math.min(1000, riskScore));
 
-  if (data.diet && data.diet.includes('Poor')) {
-    riskScore += 2;
-    lifestyleScore -= 10;
-    recommendations.push("A healthier diet rich in whole foods can greatly improve overall health.");
-  }
-
-  if (data.exercise && data.exercise.includes('Never')) {
-    riskScore += 2;
-    lifestyleScore -= 15;
-    recommendations.push("Regular physical activity can help reduce risk. Try starting small with daily walks.");
-  }
-
-  // Calculate final scores (ensure they don't go below 0)
-  physicalScore = Math.max(0, physicalScore);
-  mentalScore = Math.max(0, mentalScore);
-  lifestyleScore = Math.max(0, lifestyleScore);
-
-  // Risk category
+  // Enhanced risk categories (5 levels)
   let riskCategory;
-  if (riskScore < 10) riskCategory = "Low Risk";
-  else if (riskScore < 20) riskCategory = "Moderate Risk";
-  else riskCategory = "High Risk";
+  if (riskScore < 300) riskCategory = "Very Low Risk";
+  else if (riskScore < 500) riskCategory = "Low Risk";
+  else if (riskScore < 700) riskCategory = "Moderate Risk";
+  else if (riskScore < 900) riskCategory = "High Risk";
+  else riskCategory = "Very High Risk";
 
+  // Default recommendation if none generated
   if (recommendations.length === 0) {
-    recommendations.push("Your health profile looks good! Keep up the great habits.");
+    recommendations.push("🌟 Your health profile is excellent! Maintain these habits with annual check-ups. Consider preventive screenings appropriate for your age group.");
   }
 
   return { 
-    riskScore, 
+    riskScore: Math.round(riskScore), 
     riskCategory, 
     recommendations,
     physicalScore: Math.round(physicalScore),
-    mentalScore: Math.round(mentalScore),
-    lifestyleScore: Math.round(lifestyleScore)
+    mentalScore: Math.round(mentalScore)
   };
 }
 
@@ -157,8 +177,7 @@ app.post('/assess', (req, res) => {
       riskScore: riskData.riskScore,
       recommendations: riskData.recommendations,
       physicalScore: riskData.physicalScore,
-      mentalScore: riskData.mentalScore,
-      lifestyleScore: riskData.lifestyleScore
+      mentalScore: riskData.mentalScore
     });
   } catch (error) {
     console.error('Assessment error:', error);
