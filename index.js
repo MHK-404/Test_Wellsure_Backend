@@ -66,35 +66,46 @@ function calculateRisk(data) {
     recommendations.push("🩺 Chronic conditions require careful management. Maintain regular check-ups with your healthcare provider and strictly follow treatment plans. Proper management can significantly reduce complications. Managing chronic diseases can decrease risk score");
   }
 
-  // BMI calculation
-  const heightM = (parseFloat(data.height) || 0) / 100;
-  const weight = parseFloat(data.weight) || 0;
-  if (heightM > 0 && weight > 0) {
+ // BMI calculation
+const heightM = (parseFloat(data.height) || 0) / 100;
+const weight = parseFloat(data.weight) || 0;
+
+if (heightM > 0 && weight > 0) {
     const bmi = weight / (heightM * heightM);
+    let bmiCategory = "";
+
     if (bmi < 18.5) {
-      riskScore += 75;
-      physicalScore -= 100;
-      recommendations.push("📊 Your BMI suggests you may be underweight. Consult a nutritionist for personalized dietary advice. Underweight individuals may have increased risk of osteoporosis and fertility issues. losing weigth will decrease your risk score by at least 75 points");
+        bmiCategory = "Underweight";
+        riskScore += 75;
+        physicalScore -= 100;
+        recommendations.push(`📊 Your BMI is ${bmi.toFixed(1)} (${bmiCategory}). Being underweight may increase the risk of osteoporosis and fertility issues. Consult a nutritionist for a personalized plan. Gaining healthy weight could decrease your risk score by at least 75 points.`);
+    } else if (bmi >= 18.5 && bmi < 25) {
+        bmiCategory = "Normal weight";
+        recommendations.push(`✅ Your BMI is ${bmi.toFixed(1)} (${bmiCategory}). Maintaining a healthy weight is great for long-term health. Keep up your balanced diet and regular exercise!`);
     } else if (bmi >= 25 && bmi < 30) {
-      riskScore += 100;
-      physicalScore -= 150;
-      recommendations.push("⚖️ Your BMI indicates overweight status. A balanced diet with portion control and 150+ minutes of weekly exercise can help. Even 5-10% weight loss significantly reduces health risks. losing weigth will decrease your risk score by at least 100 points");
+        bmiCategory = "Overweight";
+        riskScore += 100;
+        physicalScore -= 150;
+        recommendations.push(`⚖️ Your BMI is ${bmi.toFixed(1)} (${bmiCategory}). A balanced diet with portion control and 150+ minutes of weekly exercise can help. Losing even 5-10% of your body weight can significantly reduce health risks. Weight loss could lower your risk score by at least 100 points.`);
     } else if (bmi >= 30) {
-      riskScore += 200;
-      physicalScore -= 250;
-      recommendations.push("⚠️ Obesity increases risk for diabetes, heart disease, and joint problems. Consider consulting a bariatric specialist. Structured weight loss programs often achieve 8-10% weight reduction in 6 months. losing weigth will decrease your risk score by at least 200 points, this calorie calculator help with weight management: https://mohap.gov.ae/en/awareness-centre/daily-calorie-requirements-calculator ");
+        bmiCategory = "Obesity";
+        riskScore += 200;
+        physicalScore -= 250;
+        recommendations.push(`⚠️ Your BMI is ${bmi.toFixed(1)} (${bmiCategory}). Obesity raises risks for diabetes, heart disease, and joint problems. Consider consulting a healthcare provider or bariatric specialist. Losing weight could decrease your risk score by at least 200 points. Here's a calorie calculator to help: https://mohap.gov.ae/en/awareness-centre/daily-calorie-requirements-calculator`);
     }
-  }
+}
+
 
   // Exercise
-  if (data.exercise && data.exercise.includes('Never')) {
+ if (data.exercise && (data.exercise.includes('Never') || data.exercise.includes('Rarely (less than once a week)'))) {
     riskScore += 80;
     physicalScore -= 200;
-    recommendations.push("🏃‍♂️ Sedentary lifestyle increases all-cause mortality by 20-30%. Start with 10-minute walks daily, gradually increasing to 30 minutes. Even light activity reduces cardiovascular risks. Exersing might decrease your risk score by 80, this is a guide for helping people start exercising: https://www.healthline.com/nutrition/how-to-start-exercising");
-  } else if (data.exercise && data.exercise.includes('1-2 times per week')) {
+    recommendations.push("🏃‍♂️ Sedentary lifestyle increases all-cause mortality by 20-30%. Start with 10-minute walks daily, gradually increasing to 30 minutes. Even light activity reduces cardiovascular risks. Exercising might decrease your risk score by 80. This is a guide for helping people start exercising: https://www.healthline.com/nutrition/how-to-start-exercising");
+} else if (data.exercise && data.exercise.includes('1-2 times per week')) {
     riskScore += 50;
     physicalScore -= 75;
-  }
+    recommendations.push("🏃‍♂️ Since you are excercising once or twice a week increasing that might help reduce the risk score");
+}
 
   // Stress & Mental Health
   const stress = parseInt(data.stress) || 5;
@@ -109,31 +120,67 @@ function calculateRisk(data) {
 
   // Sleep
   if (data.sleep && data.sleep.includes('Less than 5')) {
-    riskScore += 120;
+    riskScore += 65;
     mentalScore -= 200;
     physicalScore -= 150;
-    recommendations.push("😴 Chronic sleep deprivation increases Alzheimer's risk and impairs glucose metabolism. Establish a consistent bedtime routine and limit screen time before bed. 7-9 hours is optimal for adults. Sleeping well will decrease your risk score by at least 120 points");
-  }
+    recommendations.push("😴 Chronic sleep deprivation increases Alzheimer's risk and impairs glucose metabolism. Establish a consistent bedtime routine and limit screen time before bed. 7-9 hours is optimal for adults. Sleeping well will decrease your risk score by at least 120 points, a guide to help with sleeping problems is here: https://www.mayoclinic.org/healthy-lifestyle/adult-health/in-depth/sleep/art-20048379");
+  } 
 
   // Diet
   if (data.diet && data.diet.includes('Poor')) {
-    riskScore += 80;
+    riskScore += 65;
     physicalScore -= 175;
-    recommendations.push("🥗 A diet high in processed foods increases inflammation. Transition to Mediterranean-style eating: emphasize vegetables, whole grains, healthy fats. Small changes like swapping soda for sparkling water make a difference. eating healthy will decrease your risk score by at least 80 points");
+    recommendations.push("🥗 A diet high in processed foods increases inflammation. Transition to Mediterranean-style eating: emphasize vegetables, whole grains, healthy fats. Small changes like swapping soda for sparkling water make a difference. eating healthy will decrease your risk score by at least 80 points, a guide to Mediterranean-diet is here: https://www.health.harvard.edu/blog/a-practical-guide-to-the-mediterranean-diet-2019032116194 ");
   }
 
   // Lifestyle factors
   if (data.screenTime && data.screenTime.includes('More than 6')) {
-    riskScore += 75;
+    riskScore += 50;
     mentalScore -= 100;
     recommendations.push("💻 Excessive screen time disrupts circadian rhythms. Follow the 20-20-20 rule: every 20 minutes, look at something 20 feet away for 20 seconds. Consider blue light filters in evenings.");
   }
-  
+
+
+// Air Quality
+if (data.airQuality && (data.airQuality.includes('Poor') || data.airQuality.includes('Very Poor'))) {
+    riskScore += 75;
+    recommendations.push("🌬️ Poor air quality can worsen respiratory and cardiovascular health. Consider investing in high-quality air purifiers, and sealing windows. If possible, relocating to an area with better air quality can significantly improve health. Here's a guide on improving indoor air: https://www.epa.gov/indoor-air-quality-iaq/improving-indoor-air-quality");
+}
+
+  // Vaction
   if (data.vacations && data.vacations.includes('Never')) {
     riskScore += 80;
     mentalScore -= 150;
     recommendations.push("✈️ Regular breaks reduce burnout risk by 40%. Even 'staycations' or long weekends provide mental health benefits. Schedule downtime just as you would important meetings.Taking good amount of rest will decrease your risk score by at least 80 points");
   }
+
+  // Commute Time
+if (data.commute && data.commute.includes('More than 60 minutes')) {
+    riskScore += 40;
+    mentalScore -= 70;
+    physicalScore -= 30;
+    recommendations.push("🚗 Long daily commutes are linked to higher stress, less physical activity, and poorer sleep. Consider negotiating remote work days, flexible hours, or eventually relocating closer to your workplace if possible.");
+}
+
+  //relaxation
+
+  // Engagement in Stress-Relieving Activities
+if (data.relaxation) {
+    if (data.relaxation.includes('Never')) {
+        riskScore += 50;
+        mentalScore -= 100;
+        recommendations.push("🧘‍♀️ Chronic stress without relief increases risk of heart disease, depression, and anxiety. Try adding simple relaxation habits like deep breathing, meditation, stretching, or short breaks into your day. Here's a beginner guide to relaxation techniques: https://www.verywellmind.com/tips-to-reduce-stress-3145195");
+    } else if (data.relaxation.includes('Rarely')) {
+        riskScore += 30;
+        mentalScore -= 50;
+        recommendations.push("🧘‍♀️ Incorporating regular stress-relieving activities even once or twice a week can greatly improve resilience. Start with short, simple practices like 5 minutes of deep breathing or walking outdoors.");
+    } else if (data.relaxation.includes('Daily')) {
+        riskScore -= 20;  // 🎯 REWARD good behavior
+        mentalScore += 50;
+        recommendations.push("🌟 Daily engagement in stress-relieving activities significantly boosts mental health and lowers disease risk. Keep it up! You are already building strong resilience.");
+    }
+}
+
 
   // Ensure scores are within bounds
   physicalScore = Math.max(0, Math.min(1000, physicalScore));
