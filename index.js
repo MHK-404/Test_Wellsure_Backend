@@ -88,9 +88,9 @@ function calculateRisk(data) {
 
   // Exercise
   if (data.exercise && data.exercise.includes('Never')) {
-    riskScore += 150;
+    riskScore += 80;
     physicalScore -= 200;
-    recommendations.push("🏃‍♂️ Sedentary lifestyle increases all-cause mortality by 20-30%. Start with 10-minute walks daily, gradually increasing to 30 minutes. Even light activity reduces cardiovascular risks.");
+    recommendations.push("🏃‍♂️ Sedentary lifestyle increases all-cause mortality by 20-30%. Start with 10-minute walks daily, gradually increasing to 30 minutes. Even light activity reduces cardiovascular risks. Exersing might decrease your risk score by 80");
   } else if (data.exercise && data.exercise.includes('1-2 times per week')) {
     riskScore += 50;
     physicalScore -= 75;
@@ -114,17 +114,17 @@ function calculateRisk(data) {
 
   // Sleep
   if (data.sleep && data.sleep.includes('Less than 5')) {
-    riskScore += 150;
+    riskScore += 120;
     mentalScore -= 200;
     physicalScore -= 150;
-    recommendations.push("😴 Chronic sleep deprivation increases Alzheimer's risk and impairs glucose metabolism. Establish a consistent bedtime routine and limit screen time before bed. 7-9 hours is optimal for adults.");
+    recommendations.push("😴 Chronic sleep deprivation increases Alzheimer's risk and impairs glucose metabolism. Establish a consistent bedtime routine and limit screen time before bed. 7-9 hours is optimal for adults. Sleeping well will decrease your risk score by at least 120 points");
   }
 
   // Diet
   if (data.diet && data.diet.includes('Poor')) {
-    riskScore += 125;
+    riskScore += 80;
     physicalScore -= 175;
-    recommendations.push("🥗 A diet high in processed foods increases inflammation. Transition to Mediterranean-style eating: emphasize vegetables, whole grains, healthy fats. Small changes like swapping soda for sparkling water make a difference.");
+    recommendations.push("🥗 A diet high in processed foods increases inflammation. Transition to Mediterranean-style eating: emphasize vegetables, whole grains, healthy fats. Small changes like swapping soda for sparkling water make a difference. eating healthy will decrease your risk score by at least 80 points");
   }
 
   // Lifestyle factors
@@ -135,9 +135,9 @@ function calculateRisk(data) {
   }
   
   if (data.vacations && data.vacations.includes('Never')) {
-    riskScore += 100;
+    riskScore += 80;
     mentalScore -= 150;
-    recommendations.push("✈️ Regular breaks reduce burnout risk by 40%. Even 'staycations' or long weekends provide mental health benefits. Schedule downtime just as you would important meetings.");
+    recommendations.push("✈️ Regular breaks reduce burnout risk by 40%. Even 'staycations' or long weekends provide mental health benefits. Schedule downtime just as you would important meetings.Taking good amount of rest will decrease your risk score by at least 80 points");
   }
 
   // Ensure scores are within bounds
