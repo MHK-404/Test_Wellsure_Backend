@@ -102,14 +102,14 @@ function calculateRisk(data) {
   mentalScore -= stress * 30;
   
   if (stress > 5) {
-    recommendations.push("🧘 Chronic stress increases cortisol levels, impacting immunity and heart health. Try mindfulness meditation - just 10 minutes daily can reduce stress markers by 30% within 8 weeks.");
+    recommendations.push("🧘 Chronic stress increases cortisol levels, impacting immunity and heart health. Try mindfulness meditation - just 10 minutes daily can reduce stress markers by 30% within 8 weeks. Managing stress could reduce risk score greatly");
   }
 
   const mentalIssues = Array.isArray(data.mentalIssues) ? data.mentalIssues : [data.mentalIssues];
   if (!mentalIssues.includes('none')) {
     riskScore += mentalIssues.length * 75;
     mentalScore -= mentalIssues.length * 100;
-    recommendations.push("🧠 Mental health is as important as physical health. Cognitive Behavioral Therapy (CBT) has 60-80% effectiveness for anxiety/depression. Many insurers cover 12-20 therapy sessions annually.");
+    recommendations.push("🧠 Mental health is as important as physical health. Cognitive Behavioral Therapy (CBT) has 60-80% effectiveness for anxiety/depression. Many insurers cover 12-20 therapy sessions annually. Mental issues might end up raising the risk score ");
   }
 
   // Sleep
