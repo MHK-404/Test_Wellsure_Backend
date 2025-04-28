@@ -40,7 +40,7 @@ function calculateRisk(data) {
   if (data.smoke.includes('Yes')) {
     riskScore += 150;
     physicalScore -= 200;
-    recommendations.push("🚭 Smoking significantly impacts your health risk profile. Consider enrolling in a smoking cessation program. Studies show quitting before age 40 reduces smoking-related death risk by 90%.");
+    recommendations.push("🚭 Smoking significantly impacts your health risk profile. Consider enrolling in a smoking cessation program. Studies show quitting before age 40 reduces smoking-related death risk by 90%. Stop Smoking and you risk score will decrease by at least 150 points");
 
     if (data.smokeAmount) {
       if (data.smokeAmount.includes('More than 20')) {
@@ -63,7 +63,7 @@ function calculateRisk(data) {
   if (!conditions.includes('none')) {
     riskScore += conditions.length * 100;
     physicalScore -= conditions.length * 150;
-    recommendations.push("🩺 Chronic conditions require careful management. Maintain regular check-ups with your healthcare provider and strictly follow treatment plans. Proper management can significantly reduce complications.");
+    recommendations.push("🩺 Chronic conditions require careful management. Maintain regular check-ups with your healthcare provider and strictly follow treatment plans. Proper management can significantly reduce complications. Managing chronic diseases can decrease risk score");
   }
 
   // BMI calculation
@@ -74,15 +74,15 @@ function calculateRisk(data) {
     if (bmi < 18.5) {
       riskScore += 75;
       physicalScore -= 100;
-      recommendations.push("📊 Your BMI suggests you may be underweight. Consult a nutritionist for personalized dietary advice. Underweight individuals may have increased risk of osteoporosis and fertility issues.");
+      recommendations.push("📊 Your BMI suggests you may be underweight. Consult a nutritionist for personalized dietary advice. Underweight individuals may have increased risk of osteoporosis and fertility issues. losing weigth will decrease your risk score by at least 75 points");
     } else if (bmi >= 25 && bmi < 30) {
       riskScore += 100;
       physicalScore -= 150;
-      recommendations.push("⚖️ Your BMI indicates overweight status. A balanced diet with portion control and 150+ minutes of weekly exercise can help. Even 5-10% weight loss significantly reduces health risks.");
+      recommendations.push("⚖️ Your BMI indicates overweight status. A balanced diet with portion control and 150+ minutes of weekly exercise can help. Even 5-10% weight loss significantly reduces health risks. losing weigth will decrease your risk score by at least 100 points");
     } else if (bmi >= 30) {
       riskScore += 200;
       physicalScore -= 250;
-      recommendations.push("⚠️ Obesity increases risk for diabetes, heart disease, and joint problems. Consider consulting a bariatric specialist. Structured weight loss programs often achieve 8-10% weight reduction in 6 months.");
+      recommendations.push("⚠️ Obesity increases risk for diabetes, heart disease, and joint problems. Consider consulting a bariatric specialist. Structured weight loss programs often achieve 8-10% weight reduction in 6 months. losing weigth will decrease your risk score by at least 200 points");
     }
   }
 
