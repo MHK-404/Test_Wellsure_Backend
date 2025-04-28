@@ -6,8 +6,9 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(cors({
-  origin: 'https://mango-wave-02f3f921e.6.azurestaticapps.net/kashi.html',
-  methods: ['POST'],
+  origin: 'https://mango-wave-02f3f921e.6.azurestaticapps.net',
+  methods: ['GET', 'POST'],
+  allowedHeaders: ['Content-Type'],
   credentials: false
 }));
 
