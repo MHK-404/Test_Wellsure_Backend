@@ -39,7 +39,7 @@ function calculateRisk(data) {
   }
 
   // Smoking calculation
-  if (data.smoke.includes('Yes')) {
+  if (data.smokeAmount.includes('Yes')) {
     riskScore += 150;
     physicalScore -= 200;
     recommendations.push("🚭 Smoking significantly impacts your health risk profile. Consider enrolling in a smoking cessation program. Studies show quitting before age 40 reduces smoking-related death risk by 90%. Stop Smoking and you risk score will decrease by at least 150 points, this link provide a help guide from an accredited hospital :https://www.mayoclinic.org/healthy-lifestyle/quit-smoking/in-depth/nicotine-craving/art-20045454#:~:text=Try%20setting%20an%20alarm%20for,you%20use%20tobacco%20or%20nicotine.");
@@ -233,5 +233,5 @@ app.post('/assess', (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log("Server running on http://localhost:${PORT}");
+  console.log('Server running on http://localhost:${PORT}');
 });
