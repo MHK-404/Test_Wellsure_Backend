@@ -67,42 +67,11 @@ function calculateRisk(data) {
     recommendations.push("🩺 Chronic conditions require careful management. Maintain regular check-ups with your healthcare provider and strictly follow treatment plans. Proper management can significantly reduce complications. Managing chronic diseases can decrease risk score");
   }
 
-  // Mental health issues calculation
-if (data.mentalIssues.includes('stress')) {
-  riskScore += 100;
-  mentalHealthScore -= 150;
-  recommendations.push("😟 Stress can contribute to various health problems. Consider mindfulness or stress management techniques. This guide offers practical tips: https://www.helpguide.org/articles/stress/stress-management.htm");
-}
+  
 
-if (data.mentalIssues.includes('anxiety')) {
-  riskScore += 120;
-  mentalHealthScore -= 180;
-  recommendations.push("😰 Anxiety can impact both mental and physical health. Professional therapy or cognitive-behavioral techniques can help. Learn more about managing anxiety here: https://www.nhs.uk/mental-health/feelings-symptoms-behaviours/feelings-and-symptoms/anxiety-fear-panic/");
-}
 
-if (data.mentalIssues.includes('depression')) {
-  riskScore += 150;
-  mentalHealthScore -= 200;
-  recommendations.push("😞 Depression is a serious condition that can affect your well-being. Therapy and medication can help. Read more about depression and treatment options:https://www.mayoclinic.org/diseases-conditions/depression/symptoms-causes/syc-20356007");
-}
 
-if (data.mentalIssues.includes('insomnia')) {
-  riskScore += 80;
-  mentalHealthScore -= 120;
-  recommendations.push("😴 Insomnia can lead to serious health complications. Proper sleep hygiene and seeking help from a healthcare provider are important. This resource provides tips for better sleep: https://www.sleepfoundation.org/sleep-hygiene");
-}
 
-if (data.mentalIssues.includes('panic')) {
-  riskScore += 140;
-  mentalHealthScore -= 190;
-  recommendations.push("😨 Panic attacks can be debilitating. Therapy, particularly cognitive-behavioral therapy (CBT), is an effective treatment. Here's a resource on managing panic attacks: https://www.mayoclinic.org/diseases-conditions/panic-attacks/symptoms-causes/syc-20376021");
-}
-
-if (data.mentalIssues.includes('mood')) {
-  riskScore += 110;
-  mentalHealthScore -= 160;
-  recommendations.push("😵 Mood swings can affect mental well-being. Keeping a regular schedule and seeking professional support can help. Learn more about managing mood disorders here:https://my.clevelandclinic.org/health/diseases/17843-mood-disorders");
-}
 
 
 
