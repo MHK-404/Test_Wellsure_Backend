@@ -7,7 +7,7 @@ const PORT = process.env.PORT || 3000;
 
 app.use(cors({
   origin: 'https://mango-wave-02f3f921e.6.azurestaticapps.net',
-  methods: ['GET', 'POST'],
+  methods: ['GET', 'POST','OPTIONS'],
   allowedHeaders: ['Content-Type'],
   credentials: false
 }));
