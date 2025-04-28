@@ -40,7 +40,7 @@ function calculateRisk(data) {
   if (data.smoke.includes('Yes')) {
     riskScore += 150;
     physicalScore -= 200;
-    recommendations.push("🚭 Smoking significantly impacts your health risk profile. Consider enrolling in a smoking cessation program. Studies show quitting before age 40 reduces smoking-related death risk by 90%. Stop Smoking and you risk score will decrease by at least 150 points");
+    recommendations.push("🚭 Smoking significantly impacts your health risk profile. Consider enrolling in a smoking cessation program. Studies show quitting before age 40 reduces smoking-related death risk by 90%. Stop Smoking and you risk score will decrease by at least 150 points, this link provide a help guide from an accredited hospital :https://www.mayoclinic.org/healthy-lifestyle/quit-smoking/in-depth/nicotine-craving/art-20045454#:~:text=Try%20setting%20an%20alarm%20for,you%20use%20tobacco%20or%20nicotine.");
 
     if (data.smokeAmount) {
       if (data.smokeAmount.includes('More than 20')) {
@@ -82,7 +82,7 @@ function calculateRisk(data) {
     } else if (bmi >= 30) {
       riskScore += 200;
       physicalScore -= 250;
-      recommendations.push("⚠️ Obesity increases risk for diabetes, heart disease, and joint problems. Consider consulting a bariatric specialist. Structured weight loss programs often achieve 8-10% weight reduction in 6 months. losing weigth will decrease your risk score by at least 200 points");
+      recommendations.push("⚠️ Obesity increases risk for diabetes, heart disease, and joint problems. Consider consulting a bariatric specialist. Structured weight loss programs often achieve 8-10% weight reduction in 6 months. losing weigth will decrease your risk score by at least 200 points, this calorie calculator help with weight management: https://mohap.gov.ae/en/awareness-centre/daily-calorie-requirements-calculator ");
     }
   }
 
@@ -90,7 +90,7 @@ function calculateRisk(data) {
   if (data.exercise && data.exercise.includes('Never')) {
     riskScore += 80;
     physicalScore -= 200;
-    recommendations.push("🏃‍♂️ Sedentary lifestyle increases all-cause mortality by 20-30%. Start with 10-minute walks daily, gradually increasing to 30 minutes. Even light activity reduces cardiovascular risks. Exersing might decrease your risk score by 80");
+    recommendations.push("🏃‍♂️ Sedentary lifestyle increases all-cause mortality by 20-30%. Start with 10-minute walks daily, gradually increasing to 30 minutes. Even light activity reduces cardiovascular risks. Exersing might decrease your risk score by 80, this is a guide for helping people start exercising: https://www.healthline.com/nutrition/how-to-start-exercising");
   } else if (data.exercise && data.exercise.includes('1-2 times per week')) {
     riskScore += 50;
     physicalScore -= 75;
@@ -102,15 +102,10 @@ function calculateRisk(data) {
   mentalScore -= stress * 30;
   
   if (stress > 5) {
-    recommendations.push("🧘 Chronic stress increases cortisol levels, impacting immunity and heart health. Try mindfulness meditation - just 10 minutes daily can reduce stress markers by 30% within 8 weeks. Managing stress could reduce risk score greatly");
+    recommendations.push("🧘 Chronic stress increases cortisol levels, impacting immunity and heart health. Try mindfulness meditation - just 10 minutes daily can reduce stress markers by 30% within 8 weeks. Managing stress could reduce risk score greatly, here is a guide in managing stress: https://www.mentalhealth.org.uk/explore-mental-health/publications/how-manage-and-reduce-stress");
   }
 
-  const mentalIssues = Array.isArray(data.mentalIssues) ? data.mentalIssues : [data.mentalIssues];
-  if (!mentalIssues.includes('none')) {
-    riskScore += mentalIssues.length * 75;
-    mentalScore -= mentalIssues.length * 100;
-    recommendations.push("🧠 Mental health is as important as physical health. Cognitive Behavioral Therapy (CBT) has 60-80% effectiveness for anxiety/depression. Many insurers cover 12-20 therapy sessions annually. Mental issues might end up raising the risk score ");
-  }
+ 
 
   // Sleep
   if (data.sleep && data.sleep.includes('Less than 5')) {
