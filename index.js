@@ -1,139 +1,174 @@
-const express = require('express');
+import express from 'express';
+import cors from 'cors';
+import morgan from 'morgan';
+
 const app = express();
-const bodyParser = require('body-parser');
-const fs = require('fs');
-const { jsPDF } = require('jspdf');
-
-app.use(bodyParser.urlencoded({ extended: true }));
-app.use(bodyParser.json());
-app.use(express.static('public'));
-
-// Health risk score calculation
-function calculateHealthRisk(data) {
-    let score = 1000;
-
-    // Physical Health
-    if (data.exercise === 'D') score -= 150;
-    if (data.chronic_conditions === 'A') score -= 200;
-    if (data.physical_health === 'C') score -= 100;
-    if (data.physical_health === 'D') score -= 150;
-    if (data.healthy_diet === 'C') score -= 100;
-    if (data.doctor_checkup === 'C' || data.doctor_checkup === 'D') score -= 100;
-
-    // Mental Health
-    if (data.stress === 'C' || data.stress === 'D') score -= 200;
-    if (data.depression === 'C' || data.depression === 'D') score -= 300;
-    if (data.stress_management === 'C' || data.stress_management === 'D') score -= 150;
-    if (data.mental_health_support === 'C' || data.mental_health_support === 'D') score -= 200;
-    if (data.sleep_disturbance === 'C' || data.sleep_disturbance === 'D') score -= 150;
-
-    // Environment
-    if (data.safety === 'C' || data.safety === 'D') score -= 100;
-    if (data.air_quality === 'C' || data.air_quality === 'D') score -= 150;
-    if (data.living_space === 'C' || data.living_space === 'D') score -= 100;
-    if (data.green_spaces === 'C' || data.green_spaces === 'D') score -= 100;
-    if (data.income_stability === 'C' || data.income_stability === 'D') score -= 100;
-
-    // Age, weight, height for BMI calculation
-    const heightInMeters = data.height / 100;
-    const bmi = data.weight / (heightInMeters * heightInMeters);
-
-    // Adjust score based on BMI
-    if (bmi < 18.5) score -= 100;  // Underweight
-    else if (bmi >= 25) score -= 150; // Overweight/Obese
-
-    return score;
-}
-
-// Generate recommendations based on answers
-function generateRecommendations(data) {
-    let recommendations = [];
-
-    if (data.exercise === 'D') recommendations.push("Exercise daily to maintain good physical health.");
-    if (data.chronic_conditions === 'A') recommendations.push("Consult with a doctor regularly about your chronic conditions.");
-    if (data.physical_health === 'C' || data.physical_health === 'D') recommendations.push("Consider improving your diet and exercise routine.");
-    if (data.healthy_diet === 'C') recommendations.push("Try to eat balanced meals and avoid skipping meals.");
-    if (data.doctor_checkup === 'C' || data.doctor_checkup === 'D') recommendations.push("Visit a doctor for regular check-ups to monitor your health.");
-    if (data.stress === 'C' || data.stress === 'D') recommendations.push("Consider stress management techniques or therapy.");
-    if (data.depression === 'C' || data.depression === 'D') recommendations.push("Seek mental health support if you're experiencing symptoms of depression.");
-    if (data.sleep_disturbance === 'C' || data.sleep_disturbance === 'D') recommendations.push("Improve your sleep habits and seek help if needed.");
-    if (data.safety === 'C' || data.safety === 'D') recommendations.push("Take steps to improve your sense of safety at home.");
-    if (data.air_quality === 'C' || data.air_quality === 'D') recommendations.push("Consider air purifiers or moving to an area with better air quality.");
-    if (data.living_space === 'C' || data.living_space === 'D') recommendations.push("Try to reduce noise levels in your living environment.");
-    if (data.green_spaces === 'C' || data.green_spaces === 'D') recommendations.push("Try to spend time in green spaces to improve your well-being.");
-    if (data.income_stability === 'C' || data.income_stability === 'D') recommendations.push("Consider finding ways to stabilize your income and reduce financial stress.");
-
-    return recommendations;
-}
-
-// Calculate insurance cost based on risk score
-function calculateInsuranceCost(riskScore, income) {
-    let cost = 0;
-
-    if (riskScore > 800) cost = 0.15 * income; // High risk
-    else if (riskScore > 600) cost = 0.10 * income; // Medium risk
-    else cost = 0.05 * income; // Low risk
-
-    return cost;
-}
-
-// Generate PDF summary
-function generatePDF(score, recommendations, income, insuranceCost) {
-    const doc = new jsPDF();
-
-    doc.text("Wellsure Health Risk Summary", 20, 20);
-    doc.text(`Health Risk Score: ${score}`, 20, 40);
-    doc.text("Recommendations:", 20, 60);
-    let y = 70;
-    recommendations.forEach((rec, index) => {
-        doc.text(`${index + 1}. ${rec}`, 20, y);
-        y += 10;
-    });
-    doc.text(`Yearly Income: AED ${income}`, 20, y + 20);
-    doc.text(`Estimated Health Insurance Cost: AED ${insuranceCost.toFixed(2)}`, 20, y + 30);
-
-    doc.save('summary.pdf');
-}
-
-// Backend route for health risk calculation
-app.post('/calculate', (req, res) => {
-    const userData = req.body;
-
-    // Calculate health risk score
-    const riskScore = calculateHealthRisk(userData);
-
-    // Generate recommendations
-    const recommendations = generateRecommendations(userData);
-
-    // Send back the score and recommendations
-    res.json({
-        riskScore,
-        recommendations
-    });
-});
-
-// Backend route for calculating insurance
-app.post('/calculate-insurance', (req, res) => {
-    const { riskScore, income } = req.body;
-
-    // Calculate insurance cost
-    const insuranceCost = calculateInsuranceCost(riskScore, income);
-
-    res.json({
-        insuranceCost
-    });
-});
-
-// Backend route to download PDF
-app.get('/summary.pdf', (req, res) => {
-    const { score, recommendations, income, insuranceCost } = req.query;
-
-    generatePDF(score, recommendations.split(','), income, insuranceCost);
-    res.download('summary.pdf'); // Assuming you have a method to generate the PDF
-});
-
-// Start the server
 const PORT = process.env.PORT || 3000;
+
+app.use(cors({
+  origin: 'https://mango-wave-02f3f921e.6.azurestaticapps.net',
+  methods: ['POST'],
+  credentials: false
+}));
+
+app.use(express.json());
+app.use(morgan('dev'));
+
+// Risk calculation logic
+function calculateRisk(data) {
+  let riskScore = 0;
+  let recommendations = [];
+  let physicalScore = 100;
+  let mentalScore = 100;
+  let lifestyleScore = 100;
+
+  // Age calculation
+  if (data.age < 25) riskScore += 1;
+  else if (data.age < 40) riskScore += 2;
+  else if (data.age < 60) riskScore += 3;
+  else riskScore += 4;
+  physicalScore -= riskScore * 2;
+
+  // Smoking calculation
+  if (data.smoke.includes('Yes')) {
+    riskScore += 3;
+    physicalScore -= 15;
+    recommendations.push("Consider enrolling in a smoking cessation program or support group.");
+
+    if (data.smokeAmount) {
+      if (data.smokeAmount.includes('More than 20')) {
+        riskScore += 2;
+        physicalScore -= 10;
+      }
+      else if (data.smokeAmount.includes('10-20')) {
+        riskScore += 1.5;
+        physicalScore -= 7;
+      }
+      else if (data.smokeAmount.includes('5-10')) {
+        riskScore += 1;
+        physicalScore -= 5;
+      }
+    }
+  }
+
+  // Chronic Conditions
+  const conditions = Array.isArray(data.conditions) ? data.conditions : [data.conditions];
+  if (!conditions.includes('none')) {
+    riskScore += conditions.length * 2;
+    physicalScore -= conditions.length * 5;
+    recommendations.push("Maintain regular check-ups and follow treatment plans for any chronic condition(s).");
+  }
+
+  // BMI calculation
+  const heightM = (parseFloat(data.height) || 0) / 100;
+  const weight = parseFloat(data.weight) || 0;
+  if (heightM > 0 && weight > 0) {
+    const bmi = weight / (heightM * heightM);
+    if (bmi < 18.5) {
+      riskScore += 1;
+      physicalScore -= 5;
+      recommendations.push("You may be underweight. Consider nutritional guidance.");
+    } else if (bmi >= 25 && bmi < 30) {
+      riskScore += 1;
+      physicalScore -= 5;
+      recommendations.push("You are overweight. A balanced diet and exercise plan could be beneficial.");
+    } else if (bmi >= 30) {
+      riskScore += 2;
+      physicalScore -= 10;
+      recommendations.push("Obesity increases risk for many conditions. Consider professional health advice.");
+    }
+  }
+
+  // Stress & Mental Health
+  const stress = parseInt(data.stress) || 5;
+  riskScore += Math.floor(stress / 3);
+  mentalScore -= stress * 3;
+  if (stress > 5) recommendations.push("Practice stress management techniques regularly.");
+
+  const mentalIssues = Array.isArray(data.mentalIssues) ? data.mentalIssues : [data.mentalIssues];
+  if (!mentalIssues.includes('none')) {
+    riskScore += mentalIssues.length;
+    mentalScore -= mentalIssues.length * 5;
+    recommendations.push("Consider speaking with a mental health professional about symptoms like anxiety, depression, or insomnia.");
+  }
+
+  // Lifestyle factors
+  if (data.screenTime && data.screenTime.includes('More than 6')) {
+    riskScore += 1;
+    lifestyleScore -= 5;
+  }
+  
+  if (data.vacations && data.vacations.includes('Never')) {
+    riskScore += 1;
+    lifestyleScore -= 5;
+    recommendations.push("Taking breaks and vacations can improve well-being. Consider planning occasional time off.");
+  }
+
+  if (data.sleep && data.sleep.includes('Less than 5')) {
+    riskScore += 2;
+    lifestyleScore -= 10;
+    recommendations.push("Aim for at least 7 hours of quality sleep each night.");
+  }
+
+  if (data.diet && data.diet.includes('Poor')) {
+    riskScore += 2;
+    lifestyleScore -= 10;
+    recommendations.push("A healthier diet rich in whole foods can greatly improve overall health.");
+  }
+
+  if (data.exercise && data.exercise.includes('Never')) {
+    riskScore += 2;
+    lifestyleScore -= 15;
+    recommendations.push("Regular physical activity can help reduce risk. Try starting small with daily walks.");
+  }
+
+  // Calculate final scores (ensure they don't go below 0)
+  physicalScore = Math.max(0, physicalScore);
+  mentalScore = Math.max(0, mentalScore);
+  lifestyleScore = Math.max(0, lifestyleScore);
+
+  // Risk category
+  let riskCategory;
+  if (riskScore < 10) riskCategory = "Low Risk";
+  else if (riskScore < 20) riskCategory = "Moderate Risk";
+  else riskCategory = "High Risk";
+
+  if (recommendations.length === 0) {
+    recommendations.push("Your health profile looks good! Keep up the great habits.");
+  }
+
+  return { 
+    riskScore, 
+    riskCategory, 
+    recommendations,
+    physicalScore: Math.round(physicalScore),
+    mentalScore: Math.round(mentalScore),
+    lifestyleScore: Math.round(lifestyleScore)
+  };
+}
+
+// API endpoint
+app.post('/assess', (req, res) => {
+  try {
+    const riskData = calculateRisk(req.body);
+    res.json({
+      status: 'success',
+      riskCategory: riskData.riskCategory,
+      riskScore: riskData.riskScore,
+      recommendations: riskData.recommendations,
+      physicalScore: riskData.physicalScore,
+      mentalScore: riskData.mentalScore,
+      lifestyleScore: riskData.lifestyleScore
+    });
+  } catch (error) {
+    console.error('Assessment error:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'An error occurred during risk assessment'
+    });
+  }
+});
+
 app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+  console.log(`Server running on http://localhost:${PORT}`);
 });
