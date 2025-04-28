@@ -16,7 +16,7 @@ app.use(morgan('dev'));
 
 // Risk calculation logic
 function calculateRisk(data) {
-  let riskScore = 500; // Start at midpoint (500/1000)
+  let riskScore = 150; // Start at midpoint (500/1000)
   let recommendations = [];
   let physicalScore = 1000;
   let mentalScore = 1000;
