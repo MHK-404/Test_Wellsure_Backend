@@ -119,15 +119,15 @@ if (heightM > 0 && weight > 0) {
         bmiCategory = "Underweight";
         riskScore += 75;
         physicalScore -= 100;
-        recommendations.push(`📊 Your BMI is ${bmi.toFixed(1)} (${bmiCategory}). Being underweight may increase the risk of osteoporosis and fertility issues. Consult a nutritionist for a personalized plan. Gaining healthy weight could decrease your risk score by at least 75 points.`);
+        recommendations.push(`Your BMI is ${bmi.toFixed(1)} (${bmiCategory}). Being underweight may increase the risk of osteoporosis and fertility issues. Consult a nutritionist for a personalized plan. Gaining healthy weight could decrease your risk score by at least 75 points.`);
     } else if (bmi >= 18.5 && bmi < 25) {
         bmiCategory = "Normal weight";
-        recommendations.push(`✅ Your BMI is ${bmi.toFixed(1)} (${bmiCategory}). Maintaining a healthy weight is great for long-term health. Keep up your balanced diet and regular exercise!`);
+        recommendations.push(`Your BMI is ${bmi.toFixed(1)} (${bmiCategory}). Maintaining a healthy weight is great for long-term health. Keep up your balanced diet and regular exercise!`);
     } else if (bmi >= 25 && bmi < 30) {
         bmiCategory = "Overweight";
         riskScore += 100;
         physicalScore -= 150;
-        recommendations.push(`⚖️ Your BMI is ${bmi.toFixed(1)} (${bmiCategory}). A balanced diet with portion control and 150+ minutes of weekly exercise can help. Losing even 5-10% of your body weight can significantly reduce health risks. Weight loss could lower your risk score by at least 100 points.`);
+        recommendations.push(` Your BMI is ${bmi.toFixed(1)} (${bmiCategory}). A balanced diet with portion control and 150+ minutes of weekly exercise can help. Losing even 5-10% of your body weight can significantly reduce health risks. Weight loss could lower your risk score by at least 100 points.`);
     } else if (bmi >= 30) {
         bmiCategory = "Obesity";
         riskScore += 200;
@@ -172,28 +172,28 @@ if (heightM > 0 && weight > 0) {
   if (data.diet && data.diet.includes('Poor')) {
     riskScore += 65;
     physicalScore -= 175;
-    recommendations.push("🥗 A diet high in processed foods increases inflammation. Transition to Mediterranean-style eating: emphasize vegetables, whole grains, healthy fats. Small changes like swapping soda for sparkling water make a difference. eating healthy will decrease your risk score by at least 80 points, a guide to Mediterranean-diet is here: https://www.health.harvard.edu/blog/a-practical-guide-to-the-mediterranean-diet-2019032116194 ");
+    recommendations.push("A diet high in processed foods increases inflammation. Transition to Mediterranean-style eating: emphasize vegetables, whole grains, healthy fats. Small changes like swapping soda for sparkling water make a difference. eating healthy will decrease your risk score by at least 80 points, a guide to Mediterranean-diet is here: https://www.health.harvard.edu/blog/a-practical-guide-to-the-mediterranean-diet-2019032116194 ");
   }
 
   // Lifestyle factors
   if (data.screenTime && data.screenTime.includes('More than 6')) {
     riskScore += 50;
     mentalScore -= 100;
-    recommendations.push("💻 Excessive screen time disrupts circadian rhythms. Follow the 20-20-20 rule: every 20 minutes, look at something 20 feet away for 20 seconds. Consider blue light filters in evenings.");
+    recommendations.push(" Excessive screen time disrupts circadian rhythms. Follow the 20-20-20 rule: every 20 minutes, look at something 20 feet away for 20 seconds. Consider blue light filters in evenings.");
   }
 
 
 // Air Quality
 if (data.airQuality && (data.airQuality.includes('Poor') || data.airQuality.includes('Very Poor'))) {
     riskScore += 75;
-    recommendations.push("🌬️ Poor air quality can worsen respiratory and cardiovascular health. Consider investing in high-quality air purifiers, and sealing windows. If possible, relocating to an area with better air quality can significantly improve health. Here's a guide on improving indoor air: https://www.epa.gov/indoor-air-quality-iaq/improving-indoor-air-quality");
+    recommendations.push(" Poor air quality can worsen respiratory and cardiovascular health. Consider investing in high-quality air purifiers, and sealing windows. If possible, relocating to an area with better air quality can significantly improve health. Here's a guide on improving indoor air: https://www.epa.gov/indoor-air-quality-iaq/improving-indoor-air-quality");
 }
 
   // Vaction
   if (data.vacations && data.vacations.includes('Never')) {
     riskScore += 80;
     mentalScore -= 150;
-    recommendations.push("✈️ Regular breaks reduce burnout risk by 40%. Even 'staycations' or long weekends provide mental health benefits. Schedule downtime just as you would important meetings.Taking good amount of rest will decrease your risk score by at least 80 points");
+    recommendations.push(" Regular breaks reduce burnout risk by 40%. Even 'staycations' or long weekends provide mental health benefits. Schedule downtime just as you would important meetings.Taking good amount of rest will decrease your risk score by at least 80 points");
   }
 
   // Commute Time
@@ -201,7 +201,7 @@ if (data.commute && data.commute.includes('More than 60 minutes')) {
     riskScore += 40;
     mentalScore -= 70;
     physicalScore -= 30;
-    recommendations.push("🚗 Long daily commutes are linked to higher stress, less physical activity, and poorer sleep. Consider negotiating remote work days, flexible hours, or eventually relocating closer to your workplace if possible.");
+    recommendations.push("Long daily commutes are linked to higher stress, less physical activity, and poorer sleep. Consider negotiating remote work days, flexible hours, or eventually relocating closer to your workplace if possible.");
 }
 
   //relaxation
