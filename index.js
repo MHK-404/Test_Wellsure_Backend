@@ -67,7 +67,8 @@ function calculateRisk(data) {
     recommendations.push("🩺 Chronic conditions require careful management. Maintain regular check-ups with your healthcare provider and strictly follow treatment plans. Proper management can significantly reduce complications. Managing chronic diseases can decrease risk score");
   }
 
- // BMI calculation
+ 
+// BMI calculation
 const heightM = (parseFloat(data.height) || 0) / 100;
 const weight = parseFloat(data.weight) || 0;
 
@@ -79,22 +80,23 @@ if (heightM > 0 && weight > 0) {
         bmiCategory = "Underweight";
         riskScore += 75;
         physicalScore -= 100;
-        recommendations.push("📊 Your BMI is ${bmi.toFixed(1)} (${bmiCategory}). Being underweight may increase the risk of osteoporosis and fertility issues. Consult a nutritionist for a personalized plan. Gaining healthy weight could decrease your risk score by at least 75 points.");
+        recommendations.push(`📊 Your BMI is ${bmi.toFixed(1)} (${bmiCategory}). Being underweight may increase the risk of osteoporosis and fertility issues. Consult a nutritionist for a personalized plan. Gaining healthy weight could decrease your risk score by at least 75 points.`);
     } else if (bmi >= 18.5 && bmi < 25) {
         bmiCategory = "Normal weight";
-        recommendations.push("✅ Your BMI is ${bmi.toFixed(1)} (${bmiCategory}). Maintaining a healthy weight is great for long-term health. Keep up your balanced diet and regular exercise!");
+        recommendations.push(`✅ Your BMI is ${bmi.toFixed(1)} (${bmiCategory}). Maintaining a healthy weight is great for long-term health. Keep up your balanced diet and regular exercise!`);
     } else if (bmi >= 25 && bmi < 30) {
         bmiCategory = "Overweight";
         riskScore += 100;
         physicalScore -= 150;
-        recommendations.push("⚖️ Your BMI is ${bmi.toFixed(1)} (${bmiCategory}). A balanced diet with portion control and 150+ minutes of weekly exercise can help. Losing even 5-10% of your body weight can significantly reduce health risks. Weight loss could lower your risk score by at least 100 points.");
+        recommendations.push(`⚖️ Your BMI is ${bmi.toFixed(1)} (${bmiCategory}). A balanced diet with portion control and 150+ minutes of weekly exercise can help. Losing even 5-10% of your body weight can significantly reduce health risks. Weight loss could lower your risk score by at least 100 points.`);
     } else if (bmi >= 30) {
         bmiCategory = "Obesity";
         riskScore += 200;
         physicalScore -= 250;
-        recommendations.push("⚠️ Your BMI is ${bmi.toFixed(1)} (${bmiCategory}). Obesity raises risks for diabetes, heart disease, and joint problems. Consider consulting a healthcare provider or bariatric specialist. Losing weight could decrease your risk score by at least 200 points. Here's a calorie calculator to help: https://mohap.gov.ae/en/awareness-centre/daily-calorie-requirements-calculator");
+        recommendations.push(`⚠️ Your BMI is ${bmi.toFixed(1)} (${bmiCategory}). Obesity raises risks for diabetes, heart disease, and joint problems. Consider consulting a healthcare provider or bariatric specialist. Losing weight could decrease your risk score by at least 200 points. Here's a calorie calculator to help: https://mohap.gov.ae/en/awareness-centre/daily-calorie-requirements-calculator`);
     }
 }
+
 
 
   // Exercise
